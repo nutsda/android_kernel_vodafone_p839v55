@@ -69,6 +69,7 @@ struct cfg80211_registered_device {
 	struct list_head bss_list;
 	struct rb_root bss_tree;
 	u32 bss_generation;
+	u32 bss_entries;
 	struct cfg80211_scan_request *scan_req; /* protected by RTNL */
 	struct cfg80211_sched_scan_request *sched_scan_req;
 	unsigned long suspend_at;
@@ -210,7 +211,6 @@ enum cfg80211_event_type {
 	EVENT_ROAMED,
 	EVENT_DISCONNECTED,
 	EVENT_IBSS_JOINED,
-	EVENT_AUTHORIZATION,
 };
 
 struct cfg80211_event {
@@ -241,12 +241,6 @@ struct cfg80211_event {
 		struct {
 			u8 bssid[ETH_ALEN];
 		} ij;
-		struct {
-			enum nl80211_authorization_status auth_status;
-			u8 key_replay_ctr[NL80211_KEY_REPLAY_CTR_LEN];
-			u8 ptk_kck[NL80211_KEY_LEN_PTK_KCK];
-			u8 ptk_kek[NL80211_KEY_LEN_PTK_KEK];
-		} au;
 	};
 };
 
@@ -403,10 +397,6 @@ void __cfg80211_roamed(struct wireless_dev *wdev,
 		       const u8 *resp_ie, size_t resp_ie_len);
 int cfg80211_mgd_wext_connect(struct cfg80211_registered_device *rdev,
 			      struct wireless_dev *wdev);
-void __cfg80211_authorization_event(struct net_device *dev,
-			   enum nl80211_authorization_status auth_status,
-			   const u8 *key_replay_ctr, const u8 *ptk_kck,
-			   const u8 *ptk_kek);
 
 void cfg80211_conn_work(struct work_struct *work);
 void cfg80211_sme_failed_assoc(struct wireless_dev *wdev);

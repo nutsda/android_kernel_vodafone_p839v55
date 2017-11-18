@@ -565,8 +565,6 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	if (!cfg->key_code)
 		return 0;
 
-	printk("PowerKey: qpnp_pon_input_dispatch key_code = %d\n",cfg->key_code);
-	
 	/* check the RT status to get the current status of the line */
 	rc = spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid,
 				QPNP_PON_RT_STS(pon->base), &pon_rt_sts, 1);
@@ -713,8 +711,6 @@ static void bark_work_func(struct work_struct *work)
 	struct qpnp_pon *pon =
 		container_of(work, struct qpnp_pon, bark_work.work);
 
-	pr_err("+++bark_work_func()...\n");
-	
 	cfg = qpnp_get_cfg(pon, PON_RESIN);
 	if (!cfg) {
 		dev_err(&pon->spmi->dev, "Invalid config pointer\n");
@@ -730,20 +726,6 @@ static void bark_work_func(struct work_struct *work)
 	}
 	/* bark RT status update delay */
 	msleep(100);
-	
-	rc = qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-	if(rc)
-	{
-	    pr_err("qpnp_pon_system_pwr_off failed!\n");
-		enable_irq(cfg->bark_irq);
-	}
-	else
-	{
-	    pr_err("qpnp_pon_system_pwr_off success!\n");
-	}
-	
-        if(0)
-	{
 	/* read the bark RT status */
 	rc = spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid,
 				QPNP_PON_RT_STS(pon->base), &pon_rt_sts, 1);
@@ -769,7 +751,6 @@ static void bark_work_func(struct work_struct *work)
 		/* re-arm the work */
 		schedule_delayed_work(&pon->bark_work, QPNP_KEY_STATUS_DELAY);
 	}
-        }
 
 err_return:
 	return;
@@ -780,8 +761,6 @@ static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 	int rc;
 	struct qpnp_pon *pon = _pon;
 	struct qpnp_pon_config *cfg;
-
-	pr_err("++++qpnp_resin_bark_irq()...\n");
 
 	/* disable the bark interrupt */
 	disable_irq_nosync(irq);
@@ -801,8 +780,8 @@ static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 	}
 
 	/* report the key event */
-	//input_report_key(pon->pon_input, cfg->key_code, 1);
-	//input_sync(pon->pon_input);
+	input_report_key(pon->pon_input, cfg->key_code, 1);
+	input_sync(pon->pon_input);
 	/* schedule work to check the bark status for key-release */
 	schedule_delayed_work(&pon->bark_work, QPNP_KEY_STATUS_DELAY);
 err_exit:
@@ -1259,12 +1238,6 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 					"Unable to read s2-type\n");
 				return rc;
 			}
-
-                        if ((PON_KPDPWR == cfg->pon_type) && (NULL != strstr(saved_command_line, "kpdpwr_warm_reset=1")))
-                        {
-                            cfg->s2_type = 1;
-                        }
-    
 			if (cfg->s2_type > QPNP_PON_RESET_TYPE_MAX) {
 				dev_err(&pon->spmi->dev,
 					"Incorrect reset type specified\n");
@@ -1440,40 +1413,6 @@ static struct kernel_param_ops dload_on_uvlo_ops = {
 };
 
 module_param_cb(dload_on_uvlo, &dload_on_uvlo_ops, &dload_on_uvlo, 0644);
-
-
-static bool dload_on_warm_boot_enable;
-
-static int qpnp_pon_debugfs_warm_boot_enable_dload_set(const char *val,
-		const struct kernel_param *kp)
-{
-	int rc = 0;
-
-    pr_err("qpnp_pon_debugfs_warm_boot_enable_dload_set...\n");
-	rc = param_set_bool(val, kp);
-	if (rc) 
-	{
-		pr_err("Unable to set bms_reset: %d\n", rc);
-		return rc;
-	}
-
-	if (*(bool *)kp->arg)
-	{
-	    pr_err("set PON_POWER_OFF_WARM_RESET\n");
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-	}
-	
-	return 0;
-}
-
-
-static struct kernel_param_ops dload_on_warm_boot_enable_ops = {
-	.set = qpnp_pon_debugfs_warm_boot_enable_dload_set,
-	.get = NULL,
-};
-
-module_param_cb(dload_on_warm_boot_enable, &dload_on_warm_boot_enable_ops, &dload_on_warm_boot_enable, 0644);
-
 
 #if defined(CONFIG_DEBUG_FS)
 
@@ -1740,15 +1679,20 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
+	if (of_property_read_bool(spmi->dev.of_node,
+					"qcom,pon-reset-off")) {
+		rc = qpnp_pon_trigger_config(PON_CBLPWR_N, false);
+		if (rc) {
+			dev_err(&spmi->dev, "failed update the PON_CBLPWR %d\n",
+				rc);
+		}
+	}
+
 	/* config whether store the hard reset reason */
 	pon->store_hard_reset_reason = of_property_read_bool(
 					spmi->dev.of_node,
 					"qcom,store-hard-reset-reason");
 
-    
-    qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
-	/* End added */
-	
 	qpnp_pon_debugfs_init(spmi);
 	return rc;
 }

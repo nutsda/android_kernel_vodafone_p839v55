@@ -61,7 +61,6 @@ static void *dload_mode_addr;
 static bool dload_mode_enabled;
 static void *emergency_dload_mode_addr;
 static bool scm_dload_supported;
-//added by zhouxin for kernel reset log in pstore
 static uint32_t is_warm_reset_enable = 0;
 
 
@@ -69,7 +68,6 @@ static int dload_set(const char *val, struct kernel_param *kp);
 static int download_mode = 1;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
-//added by zhouxin for kernel reset log in pstore
 module_param_named(warm_reset_enable, is_warm_reset_enable, uint, S_IRUGO | S_IWUSR);
 
 static int panic_prep_restart(struct notifier_block *this,
@@ -248,8 +246,7 @@ static void msm_restart_prepare(const char *cmd)
 			need_warm_reset = true;
 	}
 
-        //added by zhouxin for kernel reset log in pstore
-	if(is_warm_reset_enable){
+        if(is_warm_reset_enable){
 		need_warm_reset = 1;
 	}
 	/* Hard reset the PMIC unless memory contents must be maintained. */

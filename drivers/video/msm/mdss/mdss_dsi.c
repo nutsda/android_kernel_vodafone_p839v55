@@ -28,6 +28,7 @@
 #include "mdss_panel.h"
 #include "mdss_dsi.h"
 #include "mdss_debug.h"
+#include "mdss_livedisplay.h"
 
 #define XO_CLK_RATE	19200000
 
@@ -102,11 +103,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		/* Add delay recommended by panel specs */
 		udelay(2000);
 	}
-    //zhangjian add for 8939
-    #ifdef CONFIG_ZFG_LCD_P8939
-    mdss_dsi_panel_power_enable(pdata, 0);
-    #endif
-    //add end
+
 	for (i = DSI_MAX_PM - 1; i >= 0; i--) {
 		/*
 		 * Core power module will be disabled when the
@@ -173,11 +170,6 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	 * bootloader. This needs to be done irresepective of whether
 	 * the lp11_init flag is set or not.
 	 */
-	 //zhangjian add for 8939
-        #ifdef CONFIG_ZFG_LCD_P8939
-        mdss_dsi_panel_power_enable(pdata, 1);
-		#endif
-        //add end
 	if (pdata->panel_info.cont_splash_enabled ||
 		!pdata->panel_info.mipi.lp11_init) {
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
@@ -480,7 +472,7 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 
 	panel_info = &ctrl_pdata->panel_data.panel_info;
 
-	pr_debug("%s+: ctrl=%p ndx=%d power_state=%d\n",
+	pr_debug("%s+: ctrl=%pK ndx=%d power_state=%d\n",
 		__func__, ctrl_pdata, ctrl_pdata->ndx, power_state);
 
 	if (power_state == panel_info->panel_power_state) {
@@ -568,7 +560,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 				panel_data);
 
 	cur_power_state = pdata->panel_info.panel_power_state;
-	pr_debug("%s+: ctrl=%p ndx=%d cur_power_state=%d\n", __func__,
+	pr_debug("%s+: ctrl=%pK ndx=%d cur_power_state=%d\n", __func__,
 		ctrl_pdata, ctrl_pdata->ndx, cur_power_state);
 
 	pinfo = &pdata->panel_info;
@@ -697,6 +689,10 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_ZTEMT_LCD_DISP_PREFERENCES
+extern void zte_disp_preferences(void);
+#endif
+
 static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -712,7 +708,7 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 				panel_data);
 	mipi  = &pdata->panel_info.mipi;
 
-	pr_debug("%s+: ctrl=%p ndx=%d cur_blank_state=%d\n", __func__,
+	pr_debug("%s+: ctrl=%pK ndx=%d cur_blank_state=%d\n", __func__,
 		ctrl_pdata, ctrl_pdata->ndx, pdata->panel_info.blank_state);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -736,12 +732,19 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
 	}
 
+#ifdef CONFIG_ZTEMT_LCD_DISP_PREFERENCES
+	zte_disp_preferences();
+#endif
+
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
 			enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
 	}
+
+	mdss_livedisplay_update(pdata->panel_info.livedisplay,
+			MODE_UPDATE_ALL);
 
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
@@ -765,7 +768,7 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 				panel_data);
 	mipi = &pdata->panel_info.mipi;
 
-	pr_debug("%s+: ctrl=%p ndx=%d power_state=%d\n",
+	pr_debug("%s+: ctrl=%pK ndx=%d power_state=%d\n",
 		__func__, ctrl_pdata, ctrl_pdata->ndx, power_state);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -835,7 +838,7 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s+: ctrl=%p ndx=%d\n", __func__,
+	pr_debug("%s+: ctrl=%pK ndx=%d\n", __func__,
 				ctrl_pdata, ctrl_pdata->ndx);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
@@ -867,7 +870,7 @@ int mdss_dsi_cont_splash_on(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s+: ctrl=%p ndx=%d\n", __func__,
+	pr_debug("%s+: ctrl=%pK ndx=%d\n", __func__,
 				ctrl_pdata, ctrl_pdata->ndx);
 
 	WARN((ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT),
@@ -1121,6 +1124,10 @@ static int mdss_dsi_dfps_config(struct mdss_panel_data *pdata, int new_fps)
 		/* left ctrl to get right ctrl */
 		sctrl_pdata = mdss_dsi_get_other_ctrl(ctrl_pdata);
 	}
+
+	ctrl_pdata->dfps_status = true;
+	if (sctrl_pdata)
+		sctrl_pdata->dfps_status = true;
 
 	if (new_fps !=
 		ctrl_pdata->panel_data.panel_info.mipi.frame_rate) {
@@ -1705,7 +1712,7 @@ int mdss_dsi_retrieve_ctrl_resources(struct platform_device *pdev, int mode,
 		return rc;
 	}
 
-	pr_info("%s: ctrl_base=%p ctrl_size=%x phy_base=%p phy_size=%x\n",
+	pr_info("%s: ctrl_base=%pK ctrl_size=%x phy_base=%pK phy_size=%x\n",
 		__func__, ctrl->ctrl_base, ctrl->reg_size, ctrl->phy_io.base,
 		ctrl->phy_io.len);
 
@@ -1884,51 +1891,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	if (!gpio_is_valid(ctrl_pdata->bklt_en_gpio))
 		pr_info("%s: bklt_en gpio not specified\n", __func__);
 
-    //zhangjian add for 8939 lcd
-    #ifdef CONFIG_ZFG_LCD_P8939
-   
-    ctrl_pdata->disp_vdddc_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-vdddc-en-gpio", 0);
-
-	if (!gpio_is_valid(ctrl_pdata->disp_vdddc_en_gpio)) {
-		pr_err("%s:%d, qcom,platform-vdddc-en-gpio not specified\n",
-						__func__, __LINE__);
-	} 
-
-	ctrl_pdata->disp_vddio_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-vddio-en-gpio", 0);
-	
-	if (!gpio_is_valid(ctrl_pdata->disp_vddio_en_gpio)) {
-		pr_err("%s:%d, qcom,platform-vddio-en-gpio not specified\n",
-						__func__, __LINE__);
-	}
-
-    ctrl_pdata->disp_debug_mode_en_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-debug-mode-en-gpio", 0);
-	
-	if (!gpio_is_valid(ctrl_pdata->disp_debug_mode_en_gpio)) {
-		pr_err("%s:%d, qcom,platform-debug-mode-en-gpio not specified\n",
-						__func__, __LINE__);
-	}    
-
-    ctrl_pdata->disp_vsp_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-vsp-gpio", 0);
-
-	if (!gpio_is_valid(ctrl_pdata->disp_vsp_gpio)) {
-		pr_err("%s:%d, qcom,platform-vsp-gpio not specified\n",
-						__func__, __LINE__);
-	} 
-
-	ctrl_pdata->disp_vsn_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-vsn-gpio", 0);
-	
-	if (!gpio_is_valid(ctrl_pdata->disp_vsn_gpio)) {
-		pr_err("%s:%d, qcom,platform-vsn-gpio not specified\n",
-						__func__, __LINE__);
-	}
-    
-    #endif
-    //zhangjian add end
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->rst_gpio))

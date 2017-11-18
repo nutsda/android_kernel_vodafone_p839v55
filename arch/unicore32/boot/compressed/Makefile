@@ -57,12 +57,12 @@ $(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/head.o $(obj)/piggy.o \
 	@:
 
 # We now have a PIC decompressor implementation.  Decompressors running
-# from RAM should not define ZFGXTADDR.  Decompressors running directly
-# from ROM or Flash must define ZFGXTADDR (preferably via the config)
-ZFGXTADDR	:= 0x03000000
+# from RAM should not define ZTEXTADDR.  Decompressors running directly
+# from ROM or Flash must define ZTEXTADDR (preferably via the config)
+ZTEXTADDR	:= 0x03000000
 ZBSSADDR	:= ALIGN(4)
 
-SEDFLAGS_lds	= s/TEXT_START/$(ZFGXTADDR)/;s/BSS_START/$(ZBSSADDR)/
+SEDFLAGS_lds	= s/TEXT_START/$(ZTEXTADDR)/;s/BSS_START/$(ZBSSADDR)/
 $(obj)/vmlinux.lds: $(obj)/vmlinux.lds.in arch/unicore32/boot/Makefile $(KCONFIG_CONFIG)
 	@sed "$(SEDFLAGS_lds)" < $< > $@
 

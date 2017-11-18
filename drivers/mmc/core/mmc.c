@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
@@ -70,6 +71,8 @@ static const struct mmc_fixup mmc_fixups[] = {
 	MMC_FIXUP_EXT_CSD_REV("MMC16G", CID_MANFID_KINGSTON, CID_OEMID_ANY,
 			add_quirk, MMC_QUIRK_BROKEN_HPI, 5),
 
+	MMC_FIXUP_EXT_CSD_REV("V10008", CID_MANFID_KINGSTON, CID_OEMID_ANY,
+			add_quirk, MMC_QUIRK_BROKEN_HPI, 7),
 	/*
 	 * Some Hynix cards exhibit data corruption over reboots if cache is
 	 * enabled. Disable cache for all versions until a class of cards that
@@ -80,6 +83,8 @@ static const struct mmc_fixup mmc_fixups[] = {
 	MMC_FIXUP(CID_NAME_ANY, CID_MANFID_NUMONYX_MICRON, CID_OEMID_ANY,
 		add_quirk_mmc, MMC_QUIRK_CACHE_DISABLE),
 	MMC_FIXUP("MMC16G", CID_MANFID_KINGSTON, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_CACHE_DISABLE),
+	MMC_FIXUP("V10008", CID_MANFID_KINGSTON, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_CACHE_DISABLE),
 
 	END_FIXUP
@@ -301,6 +306,9 @@ static void mmc_select_card_type(struct mmc_card *card)
 	card->ext_csd.card_type = card_type;
 }
 
+/* Minimum partition switch timeout in milliseconds */
+#define MMC_MIN_PART_SWITCH_TIME	300
+
 /*
  * Decode extended CSD.
  */
@@ -369,6 +377,10 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 
 		/* EXT_CSD value is in units of 10ms, but we store in ms */
 		card->ext_csd.part_time = 10 * ext_csd[EXT_CSD_PART_SWITCH_TIME];
+		/* Some eMMC set the value too low so set a minimum */
+		if (card->ext_csd.part_time &&
+		    card->ext_csd.part_time < MMC_MIN_PART_SWITCH_TIME)
+			card->ext_csd.part_time = MMC_MIN_PART_SWITCH_TIME;
 
 		/* Sleep / awake timeout in 100ns units */
 		if (sa_shift > 0 && sa_shift <= 0x17)
@@ -529,15 +541,19 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.bkops_en = ext_csd[EXT_CSD_BKOPS_EN];
 			card->ext_csd.raw_bkops_status =
 				ext_csd[EXT_CSD_BKOPS_STATUS];
-			if (!card->ext_csd.bkops_en &&
+			if (!(mmc_card_get_bkops_en_manual(card)) &&
 				card->host->caps2 & MMC_CAP2_INIT_BKOPS) {
-				err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-					EXT_CSD_BKOPS_EN, 1, 0);
-				if (err)
+				mmc_card_set_bkops_en_manual(card);
+				err = mmc_switch(card,
+					EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_BKOPS_EN,
+					card->ext_csd.bkops_en , 0);
+				if (err) {
 					pr_warn("%s: Enabling BKOPS failed\n",
 						mmc_hostname(card->host));
-				else
-					card->ext_csd.bkops_en = 1;
+					mmc_card_clr_bkops_en_manual(card);
+				}
+
 			}
 		}
 
@@ -702,83 +718,6 @@ MMC_DEV_ATTR(enhanced_area_size, "%u\n", card->ext_csd.enhanced_area_size);
 MMC_DEV_ATTR(raw_rpmb_size_mult, "%#x\n", card->ext_csd.raw_rpmb_size_mult);
 MMC_DEV_ATTR(rel_sectors, "%#x\n", card->ext_csd.rel_sectors);
 
-//add by ssy@03-14-2011: export emmc infomation for e-mode...
-typedef struct _mmc_manf_info {
-	int id;
-	char *name;
-} mmc_manf_info;
-
-mmc_manf_info man_list[] = {
-	{0x02, "Sandisk"},
-	{0x11, "Toshiba"},
-	{0x13, "Micro"},
-	{0x15, "Sumsung"},
-	{0x45, "Sandisk"},
-	{0x46, "Kingstone"},
-	{0x90, "Hynix"},
-};
-
-
-static ssize_t mmc_info_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct mmc_card *card = container_of(dev, struct mmc_card, dev);
-	int card_block_size = 512; //fixme...
-	char *memtype = "UNKNOWN";
-	char *manfname = "UNKNOWN";
-	int i = 0;
-
-	switch (card->type) {
-	case MMC_TYPE_MMC:
-		memtype = "MMC";
-		break;
-
-	case MMC_TYPE_SD:
-		memtype = "SD";
-		break;
-
-	case MMC_TYPE_SDIO:
-		memtype = "SDIO";
-		break;
-
-	default:
-		memtype = "UNKNOWN";
-		break;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(man_list); i++) {
-		if (man_list[i].id == card->cid.manfid) {
-			manfname = man_list[i].name;
-			break;
-		}
-	}
-
-	return sprintf(buf, "Memory Type: %s\n"
-		       "Size(sectors): %u\n"
-		       "Block Length (bytes): %d\n"
-		       "Size (kB): %u\n"
-		       "Manufacture ID: 0x%06x(%s)\n"
-		       "OEM/Application ID: 0x%04x\n"
-		       "Product Name: %s\n"
-		       "Product serial #: 0x%08x\n"
-		       "FirmWare Revision: 0x%x\n"
-		       "HardWare Revision: 0x%x\n"
-		       "Manufacturing Date: %02d/%04d\n",
-		       memtype,
-		       card->ext_csd.sectors,
-		       card_block_size,
-		       (card->ext_csd.sectors / 1024) * card_block_size,
-		       card->cid.manfid, manfname,
-		       card->cid.oemid,
-		       card->cid.prod_name,
-		       card->cid.serial,
-		       card->cid.fwrev,
-		       card->cid.hwrev,
-		       card->cid.month, card->cid.year);
-}
-
-static DEVICE_ATTR(info, S_IRUGO, mmc_info_show, NULL);
-//end
-
 static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_cid.attr,
 	&dev_attr_csd.attr,
@@ -794,7 +733,6 @@ static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_serial.attr,
 	&dev_attr_enhanced_area_offset.attr,
 	&dev_attr_enhanced_area_size.attr,
-	&dev_attr_info.attr,
 	&dev_attr_raw_rpmb_size_mult.attr,
 	&dev_attr_rel_sectors.attr,
 	NULL,
@@ -1775,8 +1713,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 				goto free_card;
 			}
 		}
-
-		if (card->ext_csd.bkops_en) {
+		if (mmc_card_get_bkops_en_manual(card)) {
 			INIT_DELAYED_WORK(&card->bkops_info.dw,
 					  mmc_start_idle_time_bkops);
 
@@ -1920,11 +1857,9 @@ static void mmc_detect(struct mmc_host *host)
 static int mmc_suspend(struct mmc_host *host)
 {
 	int err = 0;
-	struct mmc_card *card = host->card;
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
-	pr_info("%s : mmc_suspend()::enter\n",mmc_hostname(host));
 
 	if (!mmc_try_claim_host(host))
 		return -EBUSY;
@@ -1943,19 +1878,10 @@ static int mmc_suspend(struct mmc_host *host)
 		err = mmc_card_sleep(host);
 	else if (!mmc_host_is_spi(host))
 		err = mmc_deselect_cards(host);
+	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
 
-	if (card != NULL && card->cid.manfid == 0x90)
-	{
-		pr_warning("%s: hynix eMMC detected , don't clear the eMMC state before deselect eMMC \n",
-			       mmc_hostname(host));
-	}
-	else
-	{
-		host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
-	}
 out:
 	mmc_release_host(host);
-	pr_info("%s : mmc_suspend()::exit , err = %d\n",mmc_hostname(host),err);
 	return err;
 }
 
@@ -1968,49 +1894,12 @@ out:
 static int mmc_resume(struct mmc_host *host)
 {
 	int err;
-	struct mmc_card *card;
 	int retries;
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
-	pr_info("%s : mmc_resume()::enter\n",mmc_hostname(host));
-	card = host->card;
 
 	mmc_claim_host(host);
-	if (card != NULL && card->cid.manfid == 0x90)
-	{
-		pr_warning("%s: hynix eMMC detected , using CMD7CMD5 - CMD5CMD7 insteading of CMD7CMD5-CMD0CMD1 to awake eMMC\n",
-			       mmc_hostname(host));
-		if(mmc_card_can_sleep(host))
-		{
-			err = mmc_card_awake(host);
-			if(err)
-			{
-				pr_err("%s : mmc_resume()::eMMC awake failed , err = %d\n",mmc_hostname(host),err);
-				mmc_release_host(host);
-				return err;
-			}
-		}
-		else if (!mmc_host_is_spi(host))
-		{
-			err = mmc_select_card(card);
-			if(err)
-			{
-				pr_err("%s : mmc_resume()::eMMC awake failed , err = %d\n",mmc_hostname(host),err);
-				mmc_release_host(host);
-				return err;
-			}
-		}
-
-		if(card->ext_csd.cache_ctrl == 1)
-		{		
-			err = mmc_cache_ctrl(host, 1);
-			if(err)
-				pr_err("%s : mmc_resume()::enable cache failed , err = %d\n",mmc_hostname(host),err);	
-		}
-	}
-	else
-	{
 	retries = 3;
 	while (retries) {
 		err = mmc_init_card(host, host->ocr, host->card);
@@ -2027,7 +1916,6 @@ static int mmc_resume(struct mmc_host *host)
 		}
 		break;
 	}
-	}
 	mmc_release_host(host);
 
 	/*
@@ -2037,7 +1925,6 @@ static int mmc_resume(struct mmc_host *host)
 	if (mmc_can_scale_clk(host))
 		mmc_init_clk_scaling(host);
 
-	pr_info("%s : mmc_resume()::exit , err = %d\n",mmc_hostname(host),err);
 	return err;
 }
 

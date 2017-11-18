@@ -283,7 +283,6 @@ struct qpnp_bms_chip {
 };
 
 static struct qpnp_bms_chip *the_chip;
-static int count = 0;
 
 static struct temp_curr_comp_map temp_curr_comp_lut[] = {
 			{-300, 15},
@@ -502,15 +501,8 @@ static bool is_battery_charging(struct qpnp_bms_chip *chip)
 		chip->batt_psy = power_supply_get_by_name("battery");
 	if (chip->batt_psy) {
 		/* if battery has been registered, use the type property */
-//modified for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
-#ifdef QPNP_LCHARGER_SOC_FULL
-		chip->batt_psy->get_property(chip->batt_psy,
-					POWER_SUPPLY_PROP_REAL_CHARGE_TYPE, &ret);
-#else
 		chip->batt_psy->get_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_CHARGE_TYPE, &ret);
-
-#endif
 		return ret.intval != POWER_SUPPLY_CHARGE_TYPE_NONE;
 	}
 
@@ -1213,14 +1205,8 @@ static int get_battery_status(struct qpnp_bms_chip *chip)
 		chip->batt_psy = power_supply_get_by_name("battery");
 	if (chip->batt_psy) {
 		/* if battery has been registered, use the status property */
-//modified for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
-#ifdef QPNP_LCHARGER_SOC_FULL
-		chip->batt_psy->get_property(chip->batt_psy,
-					POWER_SUPPLY_PROP_REAL_STATUS, &ret);
-#else
 		chip->batt_psy->get_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_STATUS, &ret);
-#endif
 		return ret.intval;
 	}
 
@@ -1426,24 +1412,12 @@ static int report_eoc(struct qpnp_bms_chip *chip)
 	if (chip->batt_psy == NULL)
 		chip->batt_psy = power_supply_get_by_name("battery");
 	if (chip->batt_psy) {
-////modified for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
-#ifdef QPNP_LCHARGER_SOC_FULL
-		rc = chip->batt_psy->get_property(chip->batt_psy,
-				POWER_SUPPLY_PROP_REAL_CHARGE_TYPE, &ret);
-#else
 		rc = chip->batt_psy->get_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_STATUS, &ret);
-
-#endif
 		if (rc) {
 			pr_err("Unable to get battery 'STATUS' rc=%d\n", rc);
-#ifdef 	QPNP_LCHARGER_SOC_FULL
-		} else if (ret.intval == POWER_SUPPLY_CHARGE_TYPE_FAST) {
-#else
 		} else if (ret.intval != POWER_SUPPLY_STATUS_FULL) {
-#endif
-		    if(!(count%1000))
-				printk("Report EOC to charger\n");
+			pr_debug("Report EOC to charger\n");
 			ret.intval = POWER_SUPPLY_STATUS_FULL;
 			rc = chip->batt_psy->set_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_STATUS, &ret);
@@ -1613,17 +1587,12 @@ static int prepare_reported_soc(struct qpnp_bms_chip *chip)
 #define SOC_CATCHUP_SEC_PER_PERCENT	60
 #define MAX_CATCHUP_SOC	(SOC_CATCHUP_SEC_MAX / SOC_CATCHUP_SEC_PER_PERCENT)
 #define SOC_CHANGE_PER_SEC		5
-static int read_shutdown_ocv_soc(struct qpnp_bms_chip *chip);
 static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 {
-	int soc, soc_change, batt_temp;
+	int soc, soc_change, batt_temp, rc;
 	int time_since_last_change_sec = 0, charge_time_sec = 0;
 	unsigned long last_change_sec;
 	bool charging;
-	int vbat_mv = 0;
-	int last_UI_soc = 0;
-	int rc = 0;
-	union power_supply_propval ret = {0,};
 
 	soc = chip->calculated_soc;
 
@@ -1723,80 +1692,6 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 	if (chip->last_soc != soc && !chip->last_soc_unbound)
 		chip->last_soc_change_sec = last_change_sec;
 
-
-	count++;
-	if(0xEFFFFF == count)
-		count = 0;
-
-//    printk("charger_debug:count%30 = %d\n",(int)(count%30));
-    if(!(count % 700)){
-	printk("charger_debug:last_soc=%d calculated_soc=%d soc=%d time_since_last_change=%d,current=%d\n",
-			chip->last_soc, chip->calculated_soc,
-			soc, time_since_last_change_sec,chip->current_now);
-    }
-
-	
-	//added by lilei for usb present and soc == 0, starging system then shutdown begin 
-	if(soc == 0){
-		rc = get_battery_voltage(chip, &vbat_mv);
-		vbat_mv = vbat_mv/1000;
-
-		if (rc < 0) {
-			pr_err("adc vbat failed err = %d\n", rc);
-			return rc;
-		}
-
-		if(charging && (vbat_mv > 3200))
-			soc=1;
-	}
-	//added by lilei for usb present and soc == 0, starging system then shutdown end
-	
-			 
-	 //added by lilei for usb present,soc fail down begin
-	 rc = read_shutdown_ocv_soc(chip);
-	 if (rc < 0) {
-			pr_err("read shutdown ocv soc failed err = %d\n", rc);
-			goto out;
-	 }
-	 
-	 last_UI_soc = chip->shutdown_soc;
-	 
-	 if((SOC_INVALID == last_UI_soc) 
-		 || chip->last_soc_invalid) 
-		 goto out;
-		 
-	 if (chip->batt_psy== NULL)
-		 chip->batt_psy = power_supply_get_by_name("battery");
-	 if (chip->batt_psy) 
-		 chip->batt_psy->get_property(chip->batt_psy,
-					 POWER_SUPPLY_PROP_ONLINE, &ret);
-
-	 if(soc != last_UI_soc && !(count%2)){
-		 printk("charger_debug:soc=%d,last_UI_soc=%d,charging=%d,ret.intval = %d\n",soc,last_UI_soc,charging,ret.intval);
-	 }
-	 
-	 if((charging && (last_UI_soc > soc))
-		  ||(!charging && (last_UI_soc < soc))
-		  ||((100 == last_UI_soc)  && (last_UI_soc > soc) 
-		  && (1 == ret.intval))){//充满后电量不下降
-			 soc = last_UI_soc;
-	 }else{
-		 if(abs(soc - last_UI_soc) >=1){//soc jump
-			 if(charging){//charging 
-				 if(soc > last_UI_soc)
-					 last_UI_soc = soc;
-				 
-			 }else{//
-				 if(soc < last_UI_soc)
-					 last_UI_soc--;
-			 }
-			 soc = last_UI_soc;
-		 }
-	 }
-		 
-	out: 
-	 //added by lilei for usb present,soc fail down end
-
 	/*
 	 * Check/update eoc under following condition:
 	 * if there is change in soc:
@@ -1840,7 +1735,7 @@ static int report_state_of_charge(struct qpnp_bms_chip *chip)
 
 	mutex_lock(&chip->last_soc_mutex);
 
-	if (chip->dt.cfg_use_voltage_soc || !chip->bms_dev_open)//modified by lilei for cal soc based on voltage rarely 0 2014.9.11
+	if (chip->dt.cfg_use_voltage_soc)
 		soc = report_voltage_based_soc(chip);
 	else
 		soc = report_vm_bms_soc(chip);
@@ -2180,7 +2075,7 @@ static void monitor_soc_work(struct work_struct *work)
 	} else {
 		battery_voltage_check(chip);
 
-		if (chip->dt.cfg_use_voltage_soc || !chip->bms_dev_open) {//modified by lilei for cal soc based on voltage rarely 0 2014.9.11
+		if (chip->dt.cfg_use_voltage_soc) {
 			calculate_soc_from_voltage(chip);
 		} else {
 			rc = get_batt_therm(chip, &batt_temp);
@@ -2230,7 +2125,7 @@ static void monitor_soc_work(struct work_struct *work)
 	 * the calculated soc or if we are using voltage based soc
 	 */
 	if ((chip->last_soc != chip->calculated_soc) ||
-					chip->dt.cfg_use_voltage_soc || !chip->bms_dev_open) //modified by lilei for cal soc based on voltage rarely 0 2014.9.11
+					chip->dt.cfg_use_voltage_soc)
 		schedule_delayed_work(&chip->monitor_soc_work,
 			msecs_to_jiffies(get_calculation_delay_ms(chip)));
 
@@ -3041,7 +2936,7 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 	/* store the start-up OCV for voltage-based-soc */
 	chip->voltage_soc_uv = chip->last_ocv_uv;
 
-	printk("warm_reset=%d est_ocv=%d  shutdown_soc_invalid=%d shutdown_ocv=%d shutdown_soc=%d last_soc=%d calculated_soc=%d last_ocv_uv=%d\n",
+	pr_info("warm_reset=%d est_ocv=%d  shutdown_soc_invalid=%d shutdown_ocv=%d shutdown_soc=%d last_soc=%d calculated_soc=%d last_ocv_uv=%d\n",
 		chip->warm_reset, est_ocv, chip->shutdown_soc_invalid,
 		chip->shutdown_ocv, chip->shutdown_soc, chip->last_soc,
 		chip->calculated_soc, chip->last_ocv_uv);
@@ -3414,8 +3309,7 @@ static int show_bms_config(struct seq_file *m, void *data)
 			"s1_sample_count\t=\t%d\n"
 			"s2_sample_count\t=\t%d\n"
 			"s1_fifo_length\t=\t%d\n"
-			"s2_fifo_length\t=\t%d\n"
-			"force_bms_active_on_charger\t=\t%d\n",
+			"s2_fifo_length\t=\t%d\n",
 			chip->dt.cfg_r_conn_mohm,
 			chip->dt.cfg_v_cutoff_uv,
 			chip->dt.cfg_max_voltage_uv,
@@ -3437,8 +3331,7 @@ static int show_bms_config(struct seq_file *m, void *data)
 			s1_sample_count,
 			s2_sample_count,
 			s1_fifo_length,
-			s2_fifo_length,
-			chip->dt.cfg_force_bms_active_on_charger);
+			s2_fifo_length);
 
 	return 0;
 }

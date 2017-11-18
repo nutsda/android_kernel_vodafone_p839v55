@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,7 +24,79 @@
 #include <linux/msm-bus-board.h>
 
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
-	[MDSS_MDP_CSC_RGB2RGB] = {
+	[MDSS_MDP_CSC_YUV2RGB_601L] = {
+		0,
+		{
+			0x0254, 0x0000, 0x0331,
+			0x0254, 0xff37, 0xfe60,
+			0x0254, 0x0409, 0x0000,
+		},
+		{ 0xfff0, 0xff80, 0xff80,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x10, 0xeb, 0x10, 0xf0, 0x10, 0xf0,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
+	[MDSS_MDP_CSC_YUV2RGB_601FR] = {
+		0,
+		{
+			0x0200, 0x0000, 0x02ce,
+			0x0200, 0xff50, 0xfe92,
+			0x0200, 0x038b, 0x0000,
+		},
+		{ 0x0000, 0xff80, 0xff80,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
+	[MDSS_MDP_CSC_YUV2RGB_709L] = {
+		0,
+		{
+			0x0254, 0x0000, 0x0396,
+			0x0254, 0xff93, 0xfeef,
+			0x0254, 0x043e, 0x0000,
+		},
+		{ 0xfff0, 0xff80, 0xff80,},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x10, 0xeb, 0x10, 0xf0, 0x10, 0xf0,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_601L] = {
+		0,
+		{
+			0x0083, 0x0102, 0x0032,
+			0xffb4, 0xff6b, 0x00e1,
+			0x00e1, 0xff44, 0xffdb
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0010, 0x0080, 0x0080,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0010, 0x00eb, 0x0010, 0x00f0, 0x0010, 0x00f0,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_601FR] = {
+		0,
+		{
+			0x0099, 0x012d, 0x003a,
+			0xffaa, 0xff56, 0x0100,
+			0x0100, 0xff2a, 0xffd6
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0000, 0x0080, 0x0080,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+	},
+	[MDSS_MDP_CSC_RGB2YUV_709L] = {
+		0,
+		{
+			0x005d, 0x013a, 0x0020,
+			0xffcc, 0xff53, 0x00e1,
+			0x00e1, 0xff34, 0xffeb
+		},
+		{ 0x0, 0x0, 0x0,},
+		{ 0x0010, 0x0080, 0x0080,},
+		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
+		{ 0x0010, 0x00eb, 0x0010, 0x00f0, 0x0010, 0x00f0,},
+	},
+	[MDSS_MDP_CSC_YUV2YUV] = {
 		0,
 		{
 			0x0200, 0x0000, 0x0000,
@@ -36,31 +108,7 @@ struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 	},
-	[MDSS_MDP_CSC_YUV2RGB] = {
-		0,
-		{
-			0x0254, 0x0000, 0x0331,
-			0x0254, 0xff37, 0xfe60,
-			0x0254, 0x0409, 0x0000,
-		},
-		{ 0xfff0, 0xff80, 0xff80,},
-		{ 0x0, 0x0, 0x0,},
-		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
-		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
-	},
-	[MDSS_MDP_CSC_RGB2YUV] = {
-		0,
-		{
-			0x0083, 0x0102, 0x0032,
-			0x1fb5, 0x1f6c, 0x00e1,
-			0x00e1, 0x1f45, 0x1fdc
-		},
-		{ 0x0, 0x0, 0x0,},
-		{ 0x0010, 0x0080, 0x0080,},
-		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
-		{ 0x0010, 0x00eb, 0x0010, 0x00f0, 0x0010, 0x00f0,},
-	},
-	[MDSS_MDP_CSC_YUV2YUV] = {
+	[MDSS_MDP_CSC_RGB2RGB] = {
 		0,
 		{
 			0x0200, 0x0000, 0x0000,
@@ -341,11 +389,13 @@ struct mdss_pp_res_type {
 	struct mdp_hist_lut_data enhist_disp_cfg[MDSS_BLOCK_DISP_NUM];
 	struct mdp_dither_cfg_data dither_disp_cfg[MDSS_BLOCK_DISP_NUM];
 	struct mdp_gamut_cfg_data gamut_disp_cfg[MDSS_BLOCK_DISP_NUM];
-	uint16_t gamut_tbl[MDSS_BLOCK_DISP_NUM][GAMUT_TOTAL_TABLE_SIZE];
+	uint16_t gamut_tbl[MDSS_BLOCK_DISP_NUM][3 * GAMUT_TOTAL_TABLE_SIZE];
 	u32 hist_data[MDSS_BLOCK_DISP_NUM][HIST_V_SIZE];
 	struct pp_sts_type pp_disp_sts[MDSS_MAX_MIXER_DISP_NUM];
 	/* physical info */
 	struct pp_hist_col_info *dspp_hist;
+	struct mdp_pcc_cfg_data raw_pcc_disp_cfg[MDSS_BLOCK_DISP_NUM];
+	struct mdp_pcc_cfg_data user_pcc_disp_cfg[MDSS_BLOCK_DISP_NUM];
 };
 
 static DEFINE_MUTEX(mdss_pp_mutex);
@@ -869,24 +919,20 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 						MDP_CSC_FLAG_YUV_IN) << 18;
 			opmode |= !!(pipe->pp_cfg.csc_cfg.flags &
 						MDP_CSC_FLAG_YUV_OUT) << 19;
-			/*
-			 * TODO: Allow pipe to be programmed whenever new CSC is
-			 * applied (i.e. dirty bit)
-			 */
-			mdss_mdp_csc_setup_data(MDSS_MDP_BLOCK_SSPP, pipe->num,
-					&pipe->pp_cfg.csc_cfg);
+
+			mdss_mdp_csc_setup_data(
+				MDSS_MDP_BLOCK_SSPP,
+				pipe->num,
+				&pipe->pp_cfg.csc_cfg);
+
 	} else {
 		if (pipe->src_fmt->is_yuv) {
 			opmode |= (0 << 19) |	/* DST_DATA=RGB */
 				  (1 << 18) |	/* SRC_DATA=YCBCR */
 				  (1 << 17);	/* CSC_1_EN */
-			/*
-			 * TODO: Needs to be part of dirty bit logic: if there
-			 * is a previously configured pipe need to re-configure
-			 * CSC matrix
-			 */
+
 			mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num,
-					   MDSS_MDP_CSC_YUV2RGB);
+					   pp_vig_csc_pipe_val(pipe));
 		}
 	}
 
@@ -2180,7 +2226,7 @@ static int pp_ad_calc_bl(struct msm_fb_data_type *mfd, int bl_in, int *bl_out,
 		pr_debug("AD not supported on device.\n");
 		return ret;
 	} else if (ret || !ad) {
-		pr_err("Failed to get ad info: ret = %d, ad = 0x%p.\n",
+		pr_err("Failed to get ad info: ret = %d, ad = 0x%pK.\n",
 			ret, ad);
 		return ret;
 	}
@@ -2196,7 +2242,7 @@ static int pp_ad_calc_bl(struct msm_fb_data_type *mfd, int bl_in, int *bl_out,
 
 	if (!ad->bl_mfd || !ad->bl_mfd->panel_info ||
 		!ad->bl_att_lut) {
-		pr_err("Invalid ad info: bl_mfd = 0x%p, ad->bl_mfd->panel_info = 0x%p, bl_att_lut = 0x%p\n",
+		pr_err("Invalid ad info: bl_mfd = 0x%pK, ad->bl_mfd->panel_info = 0x%pK, bl_att_lut = 0x%pK\n",
 			ad->bl_mfd,
 			(!ad->bl_mfd) ? NULL : ad->bl_mfd->panel_info,
 			ad->bl_att_lut);
@@ -2658,6 +2704,101 @@ static void pp_update_pcc_regs(char __iomem *addr,
 	writel_relaxed(cfg_ptr->b.rgb_1, addr + 8);
 }
 
+static u32 pcc_rescale(u32 raw, u32 user)
+{
+	int val = 0;
+
+	if (raw > 32768)
+		raw = 32768;
+	if (user > 32768)
+		user = 32768;
+	val = 32768 - ((32768 - raw) + (32768 - user));
+	return val < 100 ? 100 : val;
+}
+
+static void pcc_combine(struct mdp_pcc_cfg_data *raw,
+		struct mdp_pcc_cfg_data *user,
+		struct mdp_pcc_cfg_data *real)
+{
+	uint32_t r_ops, u_ops, r_en, u_en;
+
+	if (real == NULL) {
+		real = kzalloc(sizeof(struct mdp_pcc_cfg_data), GFP_KERNEL);
+		if (!real) {
+			pr_err("%s: alloc failed!", __func__);
+			return;
+		}
+	}
+
+	r_ops = raw ? raw->ops : MDP_PP_OPS_DISABLE;
+	u_ops = user ? user->ops : MDP_PP_OPS_DISABLE;
+	r_en = raw && !(raw->ops & MDP_PP_OPS_DISABLE);
+	u_en = user && !(user->ops & MDP_PP_OPS_DISABLE);
+
+	// user configuration may change often, but the raw configuration
+	// will correspond to calibration data which should only change if
+	// there is a mode switch. we only care about the base
+	// coefficients from the user config.
+
+	if (!r_en || (raw->r.r == 0 && raw->g.g == 0 && raw->b.b == 0))
+		raw->r.r = raw->g.g = raw->b.b = 32768;
+	if (!u_en || (user->r.r == 0 && user->g.g == 0 && user->b.b ==0))
+		user->r.r = user->g.g = user->b.b = 32768;
+
+	memcpy(real, raw, sizeof(struct mdp_pcc_cfg_data));
+	real->r.r = pcc_rescale(raw->r.r, user->r.r);
+	real->g.g = pcc_rescale(raw->g.g, user->g.g);
+	real->b.b = pcc_rescale(raw->b.b, user->b.b);
+	if (r_en && u_en)
+		real->ops = r_ops | u_ops;
+	else if (r_en)
+		real->ops = r_ops;
+	else if (u_en)
+		real->ops = u_ops;
+	else
+		real->ops = MDP_PP_OPS_DISABLE;
+
+	pr_debug("%s: raw:\n", __func__);
+	pp_print_pcc_cfg_data(raw, 0);
+	pr_debug("%s: user:\n", __func__);
+	pp_print_pcc_cfg_data(user, 0);
+	pr_debug("%s: real:\n", __func__);
+	pp_print_pcc_cfg_data(real, 0);
+}
+
+int mdss_mdp_user_pcc_config(struct mdp_pcc_cfg_data *config)
+{
+	int ret = 0;
+	u32 disp_num = 0;
+
+	if ((config->block < MDP_LOGICAL_BLOCK_DISP_0) ||
+		(config->block >= MDP_BLOCK_MAX))
+		return -EINVAL;
+
+	if ((config->ops & MDSS_PP_SPLIT_MASK) == MDSS_PP_SPLIT_MASK) {
+		pr_warn("Can't set both split bits\n");
+		return -EINVAL;
+	}
+
+	if (config->ops & MDP_PP_OPS_READ) {
+		pr_warn("Only write is supported for user PCC\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&mdss_pp_mutex);
+	disp_num = config->block - MDP_LOGICAL_BLOCK_DISP_0;
+
+	mdss_pp_res->user_pcc_disp_cfg[disp_num] = *config;
+	pcc_combine(&mdss_pp_res->raw_pcc_disp_cfg[disp_num],
+				&mdss_pp_res->user_pcc_disp_cfg[disp_num],
+				&mdss_pp_res->pcc_disp_cfg[disp_num]);
+	mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PCC;
+
+	mutex_unlock(&mdss_pp_mutex);
+	return ret;
+}
+
+
 int mdss_mdp_pcc_config(struct mdp_pcc_cfg_data *config,
 					u32 *copyback)
 {
@@ -2693,7 +2834,10 @@ int mdss_mdp_pcc_config(struct mdp_pcc_cfg_data *config,
 		*copyback = 1;
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 	} else {
-		mdss_pp_res->pcc_disp_cfg[disp_num] = *config;
+		mdss_pp_res->raw_pcc_disp_cfg[disp_num] = *config;
+		pcc_combine(&mdss_pp_res->raw_pcc_disp_cfg[disp_num],
+					&mdss_pp_res->user_pcc_disp_cfg[disp_num],
+					&mdss_pp_res->pcc_disp_cfg[disp_num]);
 		mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PCC;
 	}
 
@@ -2715,6 +2859,33 @@ static void pp_read_igc_lut_cached(struct mdp_igc_lut_data *cfg)
 			mdss_pp_res->igc_disp_cfg[disp_num].c2_data[i];
 	}
 }
+#ifdef CONFIG_ZTEMT_LCD_DISP_PREFERENCES
+int zte_mdss_pcc_config(struct mdp_pcc_cfg_data *config)
+{
+	int ret = 0;
+	u32 disp_num = 0;
+
+	if ((config->block < MDP_LOGICAL_BLOCK_DISP_0) ||
+		(config->block >= MDP_BLOCK_MAX))
+		return -EINVAL;
+
+	if ((config->ops & MDSS_PP_SPLIT_MASK) == MDSS_PP_SPLIT_MASK) {
+		pr_warn("Can't set both split bits\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&mdss_pp_mutex);
+	disp_num = config->block - MDP_LOGICAL_BLOCK_DISP_0;
+	if (mdss_pp_res) {
+		mdss_pp_res->pcc_disp_cfg[disp_num] = *config;
+		mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PCC;
+	}
+	mutex_unlock(&mdss_pp_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(zte_mdss_pcc_config);
+#endif
 
 static void pp_read_igc_lut(struct mdp_igc_lut_data *cfg,
 				char __iomem *addr, u32 blk_idx)
@@ -3389,6 +3560,11 @@ int mdss_mdp_gamut_config(struct mdp_gamut_cfg_data *config,
 		*copyback = 1;
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 	} else {
+		if (pp_gm_has_invalid_lut_size(config)) {
+			pr_err("invalid lut size for gamut\n");
+			ret = -EINVAL;
+			goto gamut_config_exit;
+		}
 		local_cfg = *config;
 		tbl_off = mdss_pp_res->gamut_tbl[disp_num];
 		for (i = 0; i < MDP_GAMUT_TABLE_NUM; i++) {
@@ -3463,7 +3639,7 @@ static int pp_hist_enable(struct pp_hist_col_info *hist_info,
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	if (hist_info->col_en) {
 		spin_unlock_irqrestore(&hist_info->hist_lock, flag);
-		pr_info("%s Hist collection has already been enabled %p\n",
+		pr_info("%s Hist collection has already been enabled %pK\n",
 			__func__, hist_info->base);
 		goto exit;
 	}
@@ -3600,15 +3776,17 @@ static int pp_hist_disable(struct pp_hist_col_info *hist_info)
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	if (hist_info->col_en == false) {
 		spin_unlock_irqrestore(&hist_info->hist_lock, flag);
-		pr_debug("Histogram already disabled (%p)\n", hist_info->base);
+		pr_debug("Histogram already disabled (%pK)\n", hist_info->base);
 		ret = -EINVAL;
 		goto exit;
 	}
-	hist_info->col_en = false;
-	hist_info->col_state = HIST_UNKNOWN;
 	spin_unlock_irqrestore(&hist_info->hist_lock, flag);
 	mdss_mdp_hist_intr_req(&mdata->hist_intr,
 				intr_mask << hist_info->intr_shift, false);
+	spin_lock_irqsave(&hist_info->hist_lock, flag);
+	hist_info->col_en = false;
+	hist_info->col_state = HIST_UNKNOWN;
+	spin_unlock_irqrestore(&hist_info->hist_lock, flag);
 	complete_all(&hist_info->first_kick);
 	complete_all(&hist_info->comp);
 	/* if hist v2, make sure HW is unlocked */
@@ -3714,7 +3892,7 @@ int mdss_mdp_hist_intr_req(struct mdss_intr *intr, u32 bits, bool en)
 	unsigned long flag;
 	int ret = 0;
 	if (!intr) {
-		pr_err("NULL addr passed, %p\n", intr);
+		pr_err("NULL addr passed, %pK\n", intr);
 		return -EINVAL;
 	}
 
@@ -4274,6 +4452,7 @@ void mdss_mdp_hist_intr_done(u32 isr)
 	bool need_complete = false;
 	u32 isr_mask = (is_hist_v2) ? HIST_V2_INTR_BIT_MASK :
 			HIST_V1_INTR_BIT_MASK;
+	u32 intr_mask = is_hist_v2 ? 1 : 3;
 
 	isr &= isr_mask;
 	while (isr != 0) {
@@ -4308,7 +4487,16 @@ void mdss_mdp_hist_intr_done(u32 isr)
 			 * Histogram collection is disabled yet we got an
 			 * interrupt somehow.
 			 */
-			pr_err("hist Done interrupt, col_en=false!\n");
+			if (mdata->mdp_hist_irq_mask ==
+					(intr_mask << hist_info->intr_shift)) {
+				mdss_mdp_hist_intr_req(&mdata->hist_intr,
+					intr_mask << hist_info->intr_shift,
+					false);
+				pr_err("Disable hist interrupt,	irq mask=%x\n",
+						mdata->mdp_hist_irq_mask);
+			} else {
+				pr_err("hist Done interrupt, col_en=false!\n");
+			}
 		}
 		/* Histogram Reset Done Interrupt */
 		if (hist_info && is_hist_reset_done && (hist_info->col_en)) {
@@ -4468,7 +4656,7 @@ static int pp_ad_invalidate_input(struct msm_fb_data_type *mfd)
 
 	ret = mdss_mdp_get_ad(mfd, &ad);
 	if (ret || !ad) {
-		pr_err("Fail to get ad: ret = %d, ad = 0x%p\n", ret, ad);
+		pr_err("Fail to get ad: ret = %d, ad = 0x%pK\n", ret, ad);
 		return -EINVAL;
 	}
 	pr_debug("AD backlight level changed (%d), trigger update to AD\n",
@@ -5561,9 +5749,6 @@ static int is_valid_calib_addr(void *addr, u32 operation)
 	int ret = 0;
 	char __iomem *ptr = addr;
 	char __iomem *mixer_base = mdss_res->mixer_intf->base;
-	char __iomem *rgb_base   = mdss_res->rgb_pipes->base;
-	char __iomem *dma_base   = mdss_res->dma_pipes->base;
-	char __iomem *vig_base   = mdss_res->vig_pipes->base;
 	char __iomem *ctl_base   = mdss_res->ctl_off->base;
 	char __iomem *dspp_base  = mdss_res->mixer_intf->dspp_base;
 
@@ -5595,17 +5780,20 @@ static int is_valid_calib_addr(void *addr, u32 operation)
 			if (ret)
 				goto valid_addr;
 		}
-		if (ptr >= vig_base) {
+		if (mdss_res->vig_pipes &&
+		    ptr >= mdss_res->vig_pipes->base) {
 			ret = is_valid_calib_vig_addr(ptr);
 			if (ret)
 				goto valid_addr;
 		}
-		if (ptr >= rgb_base) {
+		if (mdss_res->rgb_pipes &&
+		    ptr >= mdss_res->rgb_pipes->base) {
 			ret = is_valid_calib_rgb_addr(ptr);
 			if (ret)
 				goto valid_addr;
 		}
-		if (ptr >= dma_base) {
+		if (mdss_res->dma_pipes &&
+		    ptr >= mdss_res->dma_pipes->base) {
 			ret = is_valid_calib_dma_addr(ptr);
 			if (ret)
 				goto valid_addr;

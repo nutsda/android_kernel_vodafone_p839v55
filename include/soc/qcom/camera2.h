@@ -214,7 +214,6 @@ struct msm_eeprom_cmm_t {
 	uint32_t cmm_size;
 };
 
-//zoupeng add imx214 otp start
 struct eeprom_memory_map_t
 {	   
       struct eeprom_map_t page;	    
@@ -222,7 +221,6 @@ struct eeprom_memory_map_t
       struct eeprom_map_t poll;	    
       struct eeprom_map_t mem;
 };
-//zoupeng add imx 214 otp end
 
 struct msm_eeprom_board_info {
 	const char *eeprom_name;
@@ -230,10 +228,8 @@ struct msm_eeprom_board_info {
 	struct msm_camera_power_ctrl_t power_info;
 	struct msm_eeprom_cmm_t cmm_data;
 	enum i2c_freq_mode_t i2c_freq_mode;
-	//zoupeng add imx214 otp start
 	uint32_t   num_blocks;
 	struct eeprom_memory_map_t *eeprom_map;
-	//zoupeng add imx 214 otp end
 };
 
 #endif

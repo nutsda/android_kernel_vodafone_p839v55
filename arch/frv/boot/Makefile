@@ -12,7 +12,7 @@ targets := Image zImage bootpImage
 
 SYSTEM	=$(LINUX)
 
-ZFGXTADDR	 = 0x02080000
+ZTEXTADDR	 = 0x02080000
 PARAMS_PHYS	 = 0x0207c000
 INITRD_PHYS	 = 0x02180000
 INITRD_VIRT	 = 0x02180000
@@ -21,13 +21,13 @@ OBJCOPYFLAGS	:=-O binary -R .note -R .note.gnu.build-id -R .comment
 
 #
 # If you don't define ZRELADDR above,
-# then it defaults to ZFGXTADDR
+# then it defaults to ZTEXTADDR
 #
 ifeq ($(ZRELADDR),)
-ZRELADDR	= $(ZFGXTADDR)
+ZRELADDR	= $(ZTEXTADDR)
 endif
 
-export	SYSTEM ZFGXTADDR ZBSSADDR ZRELADDR INITRD_PHYS INITRD_VIRT PARAMS_PHYS
+export	SYSTEM ZTEXTADDR ZBSSADDR ZRELADDR INITRD_PHYS INITRD_VIRT PARAMS_PHYS
 
 Image: $(obj)/Image
 

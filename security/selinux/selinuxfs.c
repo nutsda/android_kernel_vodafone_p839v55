@@ -41,14 +41,6 @@
 #include "objsec.h"
 #include "conditional.h"
 
-/*
- * Preproc/postproc policy as binary image
- * by ZFG_BOOT_20151105
- */
-#if defined(CONFIG_SECURITY_SELINUX_POLICYPROC)
-#include "ss/policyproc.h"
-#endif /* CONFIG_SECURITY_SELINUX_POLICYPROC */
-
 /* Policy capability filenames */
 static char *policycap_names[] = {
 	"network_peer_controls",
@@ -158,7 +150,7 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 		goto out;
 
 	/* No partial writes. */
-	length = EINVAL;
+	length = -EINVAL;
 	if (*ppos != 0)
 		goto out;
 
@@ -408,17 +400,6 @@ static int sel_open_policy(struct inode *inode, struct file *filp)
 	if (rc)
 		goto err;
 
-/*
- * Preproc/postproc policy as binary image
- * by ZFG_BOOT_20151105
- */
-#if defined(CONFIG_SECURITY_SELINUX_POLICYPROC)
-	rc = pp_postproc_policy(&plm->data, &plm->len);
-	if (rc) {
-		goto err;
-	}
-#endif /* CONFIG_SECURITY_SELINUX_POLICYPROC */
-
 	policy_opened = 1;
 
 	filp->private_data = plm;
@@ -548,16 +529,6 @@ static ssize_t sel_write_load(struct file *file, const char __user *buf,
 	length = -EFAULT;
 	if (copy_from_user(data, buf, count) != 0)
 		goto out;
-
-/*
- * Preproc/postproc policy as binary image
- * by ZFG_BOOT_20151105
- */
-#if defined(CONFIG_SECURITY_SELINUX_POLICYPROC)
-	if (pp_preproc_policy(&data, &count) != 0) {
-		goto out;
-	}
-#endif /* CONFIG_SECURITY_SELINUX_POLICYPROC */
 
 	length = security_load_policy(data, count);
 	if (length)
@@ -1219,7 +1190,7 @@ static void sel_remove_entries(struct dentry *de)
 	spin_lock(&de->d_lock);
 	node = de->d_subdirs.next;
 	while (node != &de->d_subdirs) {
-		struct dentry *d = list_entry(node, struct dentry, d_u.d_child);
+		struct dentry *d = list_entry(node, struct dentry, d_child);
 
 		spin_lock_nested(&d->d_lock, DENTRY_D_LOCK_NESTED);
 		list_del_init(node);
@@ -1693,12 +1664,12 @@ static void sel_remove_classes(void)
 
 	list_for_each(class_node, &class_dir->d_subdirs) {
 		struct dentry *class_subdir = list_entry(class_node,
-					struct dentry, d_u.d_child);
+					struct dentry, d_child);
 		struct list_head *class_subdir_node;
 
 		list_for_each(class_subdir_node, &class_subdir->d_subdirs) {
 			struct dentry *d = list_entry(class_subdir_node,
-						struct dentry, d_u.d_child);
+						struct dentry, d_child);
 
 			if (d->d_inode)
 				if (d->d_inode->i_mode & S_IFDIR)

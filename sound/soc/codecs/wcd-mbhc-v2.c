@@ -63,6 +63,11 @@ enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_PULLUP,
 	WCD_MBHC_EN_NONE,
 };
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+extern bool aw8736_ext_spk_power_amp_on(int);
+extern bool hphr_channel_on(int);
+extern void schedule_delay_pa_on(void);
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
@@ -313,12 +318,17 @@ out_micb_en:
 			  mbhc->is_hs_recording);
 		break;
 	case WCD_EVENT_POST_MICBIAS_2_OFF:
-		if (mbhc->mbhc_cb->set_auto_zeroing)
-			mbhc->mbhc_cb->set_auto_zeroing(codec, false);
-		if (mbhc->mbhc_cb->set_micbias_value)
-			mbhc->mbhc_cb->set_micbias_value(codec);
 		if (!mbhc->mbhc_cb->mbhc_micbias_control)
 			mbhc->is_hs_recording = false;
+		if (mbhc->micbias_enable) {
+			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
+			break;
+		}
+
+		if (mbhc->mbhc_cb->set_auto_zeroing)
+			mbhc->mbhc_cb->set_auto_zeroing(codec, false);
+		if (mbhc->mbhc_cb->set_micbias_value && !mbhc->micbias_enable)
+			mbhc->mbhc_cb->set_micbias_value(codec);
 		/* Enable PULL UP if PA's are enabled */
 		if ((test_bit(WCD_MBHC_EVENT_PA_HPHL, &mbhc->event_state)) ||
 				(test_bit(WCD_MBHC_EVENT_PA_HPHR,
@@ -359,6 +369,9 @@ out_micb_en:
 			hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		clear_bit(WCD_MBHC_EVENT_PA_HPHR, &mbhc->event_state);
 		/* check if micbias is enabled */
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+		aw8736_ext_spk_power_amp_on(0);
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 		if (micbias2)
 			/* Disable cs, pullup & enable micbias */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
@@ -380,12 +393,24 @@ out_micb_en:
 	case WCD_EVENT_PRE_HPHR_PA_ON:
 		set_bit(WCD_MBHC_EVENT_PA_HPHR, &mbhc->event_state);
 		/* check if micbias is enabled */
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+		schedule_delay_pa_on();
+		if (mbhc->current_plug != MBHC_PLUG_TYPE_NONE) {
+			if (micbias2)
+				/* Disable cs, pullup & enable micbias */
+				wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
+			else
+				/* Disable micbias, enable pullup & cs */
+				wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_PULLUP);
+		}
+#else
 		if (micbias2)
 			/* Disable cs, pullup & enable micbias */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
 		else
 			/* Disable micbias, enable pullup & cs */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_PULLUP);
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 		break;
 	default:
 		break;
@@ -445,7 +470,9 @@ static void wcd_mbhc_clr_and_turnon_hph_padac(struct wcd_mbhc *mbhc)
 {
 	bool pa_turned_on = false;
 	u8 wg_time;
-
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+       hphr_channel_on(0);
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 	WCD_MBHC_REG_READ(WCD_MBHC_HPH_CNP_WG_TIME, wg_time);
 	wg_time += 1;
 
@@ -473,6 +500,25 @@ static void wcd_mbhc_clr_and_turnon_hph_padac(struct wcd_mbhc *mbhc)
 	}
 }
 
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+static bool wcd_mbhc_is_hphr_pa_on(struct wcd_mbhc *mbhc)
+{
+	bool hph_pa_on = false;
+
+	WCD_MBHC_REG_READ(WCD_MBHC_HPH_PA_EN, hph_pa_on);
+
+	return (hph_pa_on) ? true : false;
+}
+static bool wcd_mbhc_is_hphl_pa_on(struct wcd_mbhc *mbhc)
+{
+	bool hph_pa_on = false;
+
+	WCD_MBHC_REG_READ(WCD_MBHC_HPH_PA_EN, hph_pa_on);
+
+	return (hph_pa_on) ? true : false;
+}
+#else
+
 static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
 {
 	bool hph_pa_on = false;
@@ -481,6 +527,7 @@ static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
 
 	return (hph_pa_on) ? true : false;
 }
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 
 static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 {
@@ -491,6 +538,22 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 
 	/* If headphone PA is on, check if userspace receives
 	* removal event to sync-up PA's state */
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+	if (wcd_mbhc_is_hphl_pa_on(mbhc)) {
+		pr_debug("%s PA is on, setting PA_OFF_ACK\n", __func__);
+		set_bit(WCD_MBHC_HPHL_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+		set_bit(WCD_MBHC_HPHR_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+	} else {
+		pr_debug("%s LPA is off\n", __func__);
+	}
+	if (wcd_mbhc_is_hphr_pa_on(mbhc)) {
+		pr_debug("%s PA is on, setting PA_OFF_ACK\n", __func__);
+		set_bit(WCD_MBHC_HPHL_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+		set_bit(WCD_MBHC_HPHR_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+	} else {
+		pr_debug("%s RPA is off\n", __func__);
+	}
+#else
 	if (wcd_mbhc_is_hph_pa_on(mbhc)) {
 		pr_debug("%s PA is on, setting PA_OFF_ACK\n", __func__);
 		set_bit(WCD_MBHC_HPHL_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
@@ -498,6 +561,7 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	} else {
 		pr_debug("%s PA is off\n", __func__);
 	}
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPH_PA_EN, 0);
 	usleep_range(wg_time * 1000, wg_time * 1000 + 50);
 }
@@ -548,6 +612,10 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				mbhc->mbhc_cb->mbhc_micb_ctrl_thr_mic(
 						mbhc->codec,
 						MIC_BIAS_2, false);
+			if (mbhc->mbhc_cb->set_micbias_value) {
+				mbhc->mbhc_cb->set_micbias_value(mbhc->codec);
+				WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_MICB_CTRL, 0);
+			}
 			mbhc->micbias_enable = false;
 		}
 
@@ -557,7 +625,11 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			 jack_type, mbhc->hph_status);
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				mbhc->hph_status, WCD_MBHC_JACK_MASK);
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+//
+#else
 		wcd_mbhc_set_and_turnoff_hph_padac(mbhc);
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 		hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
@@ -581,6 +653,12 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					mbhc->mbhc_cb->mbhc_micb_ctrl_thr_mic(
 							mbhc->codec,
 							MIC_BIAS_2, false);
+				if (mbhc->mbhc_cb->set_micbias_value) {
+					mbhc->mbhc_cb->set_micbias_value(
+							mbhc->codec);
+					WCD_MBHC_REG_UPDATE_BITS(
+							WCD_MBHC_MICB_CTRL, 0);
+				}
 				mbhc->micbias_enable = false;
 			}
 			mbhc->hph_type = WCD_MBHC_HPH_NONE;
@@ -849,7 +927,7 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 		mbhc->mbhc_cb->mbhc_common_micb_ctrl(codec,
 				MBHC_COMMON_MICB_PRECHARGE,
 				false);
-	if (mbhc->mbhc_cb->set_micbias_value)
+	if (mbhc->mbhc_cb->set_micbias_value && !mbhc->micbias_enable)
 		mbhc->mbhc_cb->set_micbias_value(codec);
 	if (mbhc->mbhc_cb->set_auto_zeroing)
 		mbhc->mbhc_cb->set_auto_zeroing(codec, false);
@@ -908,7 +986,7 @@ static void wcd_enable_mbhc_supply(struct wcd_mbhc *mbhc,
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
 	} else {
 		if (plug_type == MBHC_PLUG_TYPE_HEADSET) {
-			if (mbhc->is_hs_recording)
+			if (mbhc->is_hs_recording || mbhc->micbias_enable)
 				wcd_enable_curr_micbias(mbhc,
 							WCD_MBHC_EN_MB);
 			else if ((test_bit(WCD_MBHC_EVENT_PA_HPHL,
@@ -994,8 +1072,9 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 
 	pr_debug("%s: Valid plug found, plug type is %d\n",
 			 __func__, plug_type);
-	if (plug_type == MBHC_PLUG_TYPE_HEADSET ||
-	    plug_type == MBHC_PLUG_TYPE_HEADPHONE) {
+	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
+	    plug_type == MBHC_PLUG_TYPE_HEADPHONE) &&
+	    (!mbhc->btn_press_intr)) {
 		WCD_MBHC_RSC_LOCK(mbhc);
 		wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 		WCD_MBHC_RSC_UNLOCK(mbhc);
@@ -1010,6 +1089,14 @@ correct_plug_type:
 					mbhc->hs_detect_work_stop);
 			wcd_enable_curr_micbias(mbhc,
 						WCD_MBHC_EN_NONE);
+			if (mbhc->micbias_enable) {
+				mbhc->mbhc_cb->mbhc_micb_ctrl_thr_mic(
+					mbhc->codec, MIC_BIAS_2, false);
+				if (mbhc->mbhc_cb->set_micbias_value)
+					mbhc->mbhc_cb->set_micbias_value(
+							mbhc->codec);
+				mbhc->micbias_enable = false;
+			}
 			goto exit;
 		}
 		if (mbhc->btn_press_intr) {
@@ -1027,6 +1114,14 @@ correct_plug_type:
 					mbhc->hs_detect_work_stop);
 			wcd_enable_curr_micbias(mbhc,
 						WCD_MBHC_EN_NONE);
+			if (mbhc->micbias_enable) {
+				mbhc->mbhc_cb->mbhc_micb_ctrl_thr_mic(
+					mbhc->codec, MIC_BIAS_2, false);
+				if (mbhc->mbhc_cb->set_micbias_value)
+					mbhc->mbhc_cb->set_micbias_value(
+							mbhc->codec);
+				mbhc->micbias_enable = false;
+			}
 			goto exit;
 		}
 		WCD_MBHC_REG_READ(WCD_MBHC_HS_COMP_RESULT, hs_comp_res);
@@ -1139,13 +1234,6 @@ correct_plug_type:
 			plug_type = MBHC_PLUG_TYPE_HEADSET;
 			goto report;
 		}
-		  else {
-            pr_debug("%s: liyang Special headset found %d\n",
-					__func__, plug_type);
-            plug_type = MBHC_PLUG_TYPE_HEADSET;
-
-			goto report;
-            }
 	}
 
 report:
@@ -1268,6 +1356,13 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 
 	if ((mbhc->current_plug == MBHC_PLUG_TYPE_NONE) &&
 	    detection_type) {
+#ifdef CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
+		wcd_mbhc_set_and_turnoff_hph_padac(mbhc);
+		//turn off the hph pa while insert headset irq, in order to fix the headset type detect problem
+		//while headset type detect, the hph pa must be turned off
+		hphr_channel_on(1);
+		//enable the HPHR switch, ensure the headset type detect normal
+#endif //CONFIG_FEATURE_ZTEMT_AUDIO_EXT_PA
 		/* Make sure MASTER_BIAS_CTL is enabled */
 		mbhc->mbhc_cb->mbhc_bias(codec, true);
 
@@ -2039,7 +2134,7 @@ int wcd_mbhc_start(struct wcd_mbhc *mbhc,
 			schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
 				      usecs_to_jiffies(FW_READ_TIMEOUT));
 		else
-			pr_err("%s: Skipping to read mbhc fw, 0x%p %p\n",
+			pr_err("%s: Skipping to read mbhc fw, 0x%pK %pK\n",
 				 __func__, mbhc->mbhc_fw, mbhc->mbhc_cal);
 	}
 	pr_debug("%s: leave %d\n", __func__, rc);

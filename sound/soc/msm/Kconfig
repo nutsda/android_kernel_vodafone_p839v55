@@ -49,7 +49,7 @@ config SND_SOC_MSM_QDSP6_INTF
 
 config SND_SOC_MSM_QDSP6V2_INTF
 	bool "SoC Q6 audio driver for MSM8974"
-	depends on MSM_QDSP6_APRV2
+	depends on MSM_QDSP6_APRV2 || MSM_QDSP6_APRV3
 	help
 	 To add support for SoC audio on MSM8974.
 	 This will enable all the platform specific
@@ -272,12 +272,6 @@ config SND_SOC_MSM8X16
 	 the machine drivers and the corresponding
 	 DAI-links.
 
-config ZFG_MULTI_BUTTON
-	bool "Enable MULTIBUTTON"
-	depends on ARCH_MSM8916
-	help
-     zfg config for multibutton
-
 config SND_SOC_MSM8909
 	tristate "SoC Machine driver for MSM8909 boards"
 	depends on ARCH_MSM8909
@@ -315,6 +309,11 @@ config SND_SOC_MDM9630
 	help
 	 To add support for SoC audio on MDM9630 boards.
 
+config FEATURE_ZTEMT_AUDIO_EXT_PA
+	tristate "use to enable the external audio PA AW8736"
+	default y	
+	help 
+		use to enable the external audio PA AW8736
 config SND_SOC_MSM8994
 	tristate "SoC Machine driver for MSM8994 boards"
 	depends on ARCH_MSM8994

@@ -96,10 +96,6 @@
 /* Length of a SCSI Command Data Block */
 #define MAX_COMMAND_SIZE	16
 
-#if 1
-#define SC_GET_CONFIGRATION    0x46
-#define SC_SET_CD_SPEED	           0xbb	
-#endif
 /* SCSI Sense Key/Additional Sense Code/ASC Qualifier values */
 #define SS_NO_SENSE				0
 #define SS_COMMUNICATION_FAILURE		0x040800
@@ -584,6 +580,14 @@ static ssize_t fsg_show_nofua(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "%u\n", curlun->nofua);
 }
 
+static ssize_t fsg_show_cdrom (struct device *dev, struct device_attribute *attr,
+			   char *buf)
+{
+	struct fsg_lun  *curlun = fsg_lun_from_dev(dev);
+
+	return sprintf(buf, "%d\n", curlun->cdrom);
+}
+
 #ifdef CONFIG_USB_MSC_PROFILING
 static ssize_t fsg_show_perf(struct device *dev, struct device_attribute *attr,
 			      char *buf)
@@ -710,7 +714,6 @@ static ssize_t fsg_store_file(struct device *dev, struct device_attribute *attr,
 	struct rw_semaphore	*filesem = dev_get_drvdata(dev);
 	int		rc = 0;
 
-	printk("fsg_store_file(): buf = %s count = %d\n", buf, (int)count);
 
 #if !defined(CONFIG_USB_G_ANDROID)
 	/* disabled in android because we need to allow closing the backing file
@@ -728,22 +731,45 @@ static ssize_t fsg_store_file(struct device *dev, struct device_attribute *attr,
 
 	/* Load new medium */
 	down_write(filesem);
-	if (count == 1 && buf[0] == ' ' && fsg_lun_is_open(curlun)) {
-		printk("fsg_store_file(): close file, input one space\n");
-		fsg_lun_close(curlun);
-		curlun->unit_attention_data = SS_MEDIUM_NOT_PRESENT;
-	} else if (count > 0 && buf[0]) {
-		printk("fsg_store_file(): open new file\n");
+	if (count > 0 && buf[0]) {
 		/* fsg_lun_open() will close existing file if any. */
 		rc = fsg_lun_open(curlun, buf);
 		if (rc == 0)
 			curlun->unit_attention_data =
 					SS_NOT_READY_TO_READY_TRANSITION;
 	} else if (fsg_lun_is_open(curlun)) {
-		printk("fsg_store_file(): close file\n");
 		fsg_lun_close(curlun);
 		curlun->unit_attention_data = SS_MEDIUM_NOT_PRESENT;
 	}
 	up_write(filesem);
 	return (rc < 0 ? rc : count);
+}
+
+static ssize_t fsg_store_cdrom(struct device *dev, struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	ssize_t    rc;
+	struct fsg_lun  *curlun = fsg_lun_from_dev(dev);
+	struct rw_semaphore  *filesem = dev_get_drvdata(dev);
+	unsigned  cdrom;
+
+	rc = kstrtouint(buf, 2, &cdrom);
+	if (rc)
+		return rc;
+
+	/*
+	 * Allow the cdrom status to change only while the
+	 * backing file is closed.
+	 */
+	down_read(filesem);
+	if (fsg_lun_is_open(curlun)) {
+		LDBG(curlun, "cdrom status change prevented\n");
+		rc = -EBUSY;
+	} else {
+		curlun->cdrom = cdrom;
+		LDBG(curlun, "cdrom status set to %d\n", curlun->cdrom);
+		rc = count;
+	}
+	up_read(filesem);
+	return rc;
 }

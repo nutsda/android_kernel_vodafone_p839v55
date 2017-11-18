@@ -38,7 +38,7 @@
 
 #define ADIS16350_XTEMP_OUT 0x10 /* X-axis gyroscope temperature measurement */
 #define ADIS16350_YTEMP_OUT 0x12 /* Y-axis gyroscope temperature measurement */
-#define ADIS16350_ZFGMP_OUT 0x14 /* Z-axis gyroscope temperature measurement */
+#define ADIS16350_ZTEMP_OUT 0x14 /* Z-axis gyroscope temperature measurement */
 
 #define ADIS16300_PITCH_OUT 0x12 /* X axis inclinometer output measurement */
 #define ADIS16300_ROLL_OUT  0x14 /* Y axis inclinometer output measurement */
@@ -165,6 +165,7 @@ struct adis16400_state {
 	int				filt_int;
 
 	struct adis adis;
+	unsigned long avail_scan_mask[2];
 };
 
 /* At the moment triggers are only used for ring buffer

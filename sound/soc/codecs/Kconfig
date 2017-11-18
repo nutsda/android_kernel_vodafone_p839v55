@@ -574,7 +574,6 @@ config SND_SOC_TPA6130A2
 config SND_SOC_MSM_STUB
 	tristate
 
-#zfg_liyang add it for zfg headset gpio detect requirement
 config ZFG_HEADSET_GPIO
     bool "zfg add zfg headset gpio detect"
 	

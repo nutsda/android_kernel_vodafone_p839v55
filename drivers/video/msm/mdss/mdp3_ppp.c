@@ -37,6 +37,7 @@
 #define MDP_PPP_MAX_BPP 4
 #define MDP_PPP_DYNAMIC_FACTOR 3
 #define MDP_PPP_MAX_READ_WRITE 3
+#define MDP_PPP_MAX_WIDTH	0xFFF
 #define ENABLE_SOLID_FILL	0x2
 #define DISABLE_SOLID_FILL	0x0
 #define BLEND_LATENCY		3
@@ -145,6 +146,11 @@ int mdp3_ppp_get_img(struct mdp_img *img, struct mdp_blit_req *req,
 
 	if (bpp <= 0) {
 		pr_err("%s incorrect format %d\n", __func__, img->format);
+		return -EINVAL;
+	}
+
+	if (img->width > MDP_PPP_MAX_WIDTH) {
+		pr_err("%s incorrect width %d\n", __func__, img->width);
 		return -EINVAL;
 	}
 
@@ -584,7 +590,12 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 			else
 				fps = panel_info->mipi.frame_rate;
 		}
-
+		if (!(check_if_rgb(req->src.format))) {
+			/* Set max fps if video is not full screen */
+			if((req->dst_rect.w < panel_info->xres) ||
+				( req->dst_rect.h < panel_info->yres))
+				fps = panel_info->mipi.frame_rate;
+		}
 		mdp3_get_bpp_info(req->src.format, &bpp);
 		if (lreq->req_list[i].flags & MDP_SMART_BLIT) {
 			/*

@@ -74,18 +74,18 @@ endif
 
 #
 # We now have a PIC decompressor implementation.  Decompressors running
-# from RAM should not define ZFGXTADDR.  Decompressors running directly
-# from ROM or Flash must define ZFGXTADDR (preferably via the config)
-# FIXME: Previous assignment to zfgxtaddr-y is lost here. See SHARK
+# from RAM should not define ZTEXTADDR.  Decompressors running directly
+# from ROM or Flash must define ZTEXTADDR (preferably via the config)
+# FIXME: Previous assignment to ztextaddr-y is lost here. See SHARK
 ifeq ($(CONFIG_ZBOOT_ROM),y)
-ZFGXTADDR	:= $(CONFIG_ZBOOT_ROM_TEXT)
+ZTEXTADDR	:= $(CONFIG_ZBOOT_ROM_TEXT)
 ZBSSADDR	:= $(CONFIG_ZBOOT_ROM_BSS)
 else
-ZFGXTADDR	:= 0
+ZTEXTADDR	:= 0
 ZBSSADDR	:= ALIGN(8)
 endif
 
-SEDFLAGS	= s/TEXT_START/$(ZFGXTADDR)/;s/BSS_START/$(ZBSSADDR)/
+SEDFLAGS	= s/TEXT_START/$(ZTEXTADDR)/;s/BSS_START/$(ZBSSADDR)/
 
 suffix_$(CONFIG_KERNEL_GZIP) = gzip
 suffix_$(CONFIG_KERNEL_LZO)  = lzo

@@ -400,7 +400,9 @@ EXPORT_SYMBOL(mmc_blk_init_bkops_statistics);
  */
 void mmc_start_delayed_bkops(struct mmc_card *card)
 {
-	if (!card || !card->ext_csd.bkops_en || mmc_card_doing_bkops(card))
+	if (!card ||
+		!(mmc_card_get_bkops_en_manual(card)) ||
+		mmc_card_doing_bkops(card))
 		return;
 
 	if (card->bkops_info.sectors_changed <
@@ -437,7 +439,7 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 	int err;
 
 	BUG_ON(!card);
-	if (!card->ext_csd.bkops_en)
+	if (!(mmc_card_get_bkops_en_manual(card)))
 		return;
 
 	if ((card->bkops_info.cancel_delayed_work) && !from_exception) {
@@ -538,8 +540,8 @@ static void mmc_wait_data_done(struct mmc_request *mrq)
 	struct mmc_context_info *context_info = &mrq->host->context_info;
 
 	spin_lock_irqsave(&context_info->lock, flags);
-	mrq->host->context_info.is_done_rcv = true;
-	wake_up_interruptible(&mrq->host->context_info.wait);
+	context_info->is_done_rcv = true;
+	wake_up_interruptible(&context_info->wait);
 	spin_unlock_irqrestore(&context_info->lock, flags);
 }
 
@@ -1358,11 +1360,11 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 	/*
 	 * Some cards require longer data read timeout than indicated in CSD.
 	 * Address this by setting the read timeout to a "reasonably high"
-	 * value. For the cards tested, 300ms has proven enough. If necessary,
+	 * value. For the cards tested, 600ms has proven enough. If necessary,
 	 * this value can be increased if other problematic cards require this.
 	 */
 	if (mmc_card_long_read_time(card) && data->flags & MMC_DATA_READ) {
-		data->timeout_ns = 300000000;
+		data->timeout_ns = 600000000;
 		data->timeout_clks = 0;
 	}
 
@@ -2197,7 +2199,7 @@ int mmc_resume_bus(struct mmc_host *host)
 	if (!mmc_bus_needs_resume(host))
 		return -EINVAL;
 
-	printk("%s: Starting deferred resume\n", mmc_hostname(host));
+	pr_debug("%s: Starting deferred resume\n", mmc_hostname(host));
 	spin_lock_irqsave(&host->lock, flags);
 	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
 	host->rescan_disable = 0;
@@ -2211,7 +2213,7 @@ int mmc_resume_bus(struct mmc_host *host)
 	}
 
 	mmc_bus_put(host);
-	printk("%s: Deferred resume completed\n", mmc_hostname(host));
+	pr_debug("%s: Deferred resume completed\n", mmc_hostname(host));
 	return 0;
 }
 
@@ -3678,7 +3680,6 @@ EXPORT_SYMBOL(mmc_cache_ctrl);
 int mmc_suspend_host(struct mmc_host *host)
 {
 	int err = 0;
-	struct mmc_card *card = host->card;
 	ktime_t start = ktime_get();
 
 	if (mmc_bus_needs_resume(host))
@@ -3737,15 +3738,6 @@ int mmc_suspend_host(struct mmc_host *host)
 	}
 	mmc_bus_put(host);
 
-	if (!err && card != NULL && card->cid.manfid == 0x90)
-	{
-		pr_warning("%s: hynix eMMC detected , keep power to eMMC during sleep\n",
-			       mmc_hostname(host));
-		host->pm_flags |= MMC_PM_KEEP_POWER;
-		/*This gates the clock by setting it to 0 Hz, Otherwise the device can not enter the suspend state*/		
-		mmc_gate_clock(host);
-	}
-
 	if (!err && !mmc_card_keep_power(host)) {
 		mmc_claim_host(host);
 		mmc_power_off(host);
@@ -3772,7 +3764,6 @@ int mmc_resume_host(struct mmc_host *host)
 {
 	int err = 0;
 	ktime_t start = ktime_get();
-	struct mmc_card *card = host->card;
 
 	mmc_bus_get(host);
 	if (mmc_bus_manual_resume(host)) {
@@ -3800,15 +3791,6 @@ int mmc_resume_host(struct mmc_host *host)
 				pm_runtime_enable(&host->card->dev);
 			}
 		}
-
-		if (card != NULL && card->cid.manfid == 0x90)
-		{
-			pr_warning("%s: hynix eMMC detected , restores clock\n",
-				       mmc_hostname(host));
-			/*This reverse the gate operation in mmc_suspend_host*/		
-			mmc_ungate_clock(host);
-		}
-		
 		BUG_ON(!host->bus_ops->resume);
 		err = host->bus_ops->resume(host);
 		if (err) {

@@ -1,9 +1,6 @@
 
 source "drivers/video/msm/vidc/Kconfig"
 
-config ZFG_LCD_P8939
-	bool	"Support for LCD power control"
-	default n
 config FB_MSM
 	tristate "MSM Framebuffer support"
 	depends on FB && ARCH_MSM

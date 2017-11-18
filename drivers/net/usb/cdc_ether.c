@@ -191,7 +191,7 @@ int usbnet_generic_cdc_bind(struct usbnet *dev, struct usb_interface *intf)
 						info->u->bSlaveInterface0);
 			if (!info->control || !info->data) {
 				dev_dbg(&intf->dev,
-					"master #%u/%p slave #%u/%p\n",
+					"master #%u/%pK slave #%u/%pK\n",
 					info->u->bMasterInterface0,
 					info->control,
 					info->u->bSlaveInterface0,
@@ -287,7 +287,7 @@ next_desc:
 		info->data = usb_ifnum_to_if(dev->udev, 1);
 		if (!info->control || !info->data || info->control != intf) {
 			dev_dbg(&intf->dev,
-				"rndis: master #0/%p slave #1/%p\n",
+				"rndis: master #0/%pK slave #1/%pK\n",
 				info->control,
 				info->data);
 			goto bad_desc;
@@ -477,7 +477,7 @@ static const struct driver_info wwan_info = {
 
 #define HUAWEI_VENDOR_ID	0x12D1
 #define NOVATEL_VENDOR_ID	0x1410
-#define ZFG_VENDOR_ID		0x19D2
+#define ZTE_VENDOR_ID		0x19D2
 #define DELL_VENDOR_ID		0x413C
 #define REALTEK_VENDOR_ID	0x0bda
 
@@ -654,55 +654,55 @@ static const struct usb_device_id	products [] = {
  * because of bugs/quirks in a given product (like Zaurus, above).
  */
 {
-	
+	/* ZTE (Vodafone) K3805-Z */
 	.match_flags    =   USB_DEVICE_ID_MATCH_VENDOR
 		 | USB_DEVICE_ID_MATCH_PRODUCT
 		 | USB_DEVICE_ID_MATCH_INT_INFO,
-	.idVendor               = ZFG_VENDOR_ID,
+	.idVendor               = ZTE_VENDOR_ID,
 	.idProduct		= 0x1003,
 	.bInterfaceClass	= USB_CLASS_COMM,
 	.bInterfaceSubClass	= USB_CDC_SUBCLASS_ETHERNET,
 	.bInterfaceProtocol	= USB_CDC_PROTO_NONE,
 	.driver_info = (unsigned long)&wwan_info,
 }, {
-	
+	/* ZTE (Vodafone) K3806-Z */
 	.match_flags    =   USB_DEVICE_ID_MATCH_VENDOR
 		 | USB_DEVICE_ID_MATCH_PRODUCT
 		 | USB_DEVICE_ID_MATCH_INT_INFO,
-	.idVendor               = ZFG_VENDOR_ID,
+	.idVendor               = ZTE_VENDOR_ID,
 	.idProduct		= 0x1015,
 	.bInterfaceClass	= USB_CLASS_COMM,
 	.bInterfaceSubClass	= USB_CDC_SUBCLASS_ETHERNET,
 	.bInterfaceProtocol	= USB_CDC_PROTO_NONE,
 	.driver_info = (unsigned long)&wwan_info,
 }, {
-	
+	/* ZTE (Vodafone) K4510-Z */
 	.match_flags    =   USB_DEVICE_ID_MATCH_VENDOR
 		 | USB_DEVICE_ID_MATCH_PRODUCT
 		 | USB_DEVICE_ID_MATCH_INT_INFO,
-	.idVendor               = ZFG_VENDOR_ID,
+	.idVendor               = ZTE_VENDOR_ID,
 	.idProduct		= 0x1173,
 	.bInterfaceClass	= USB_CLASS_COMM,
 	.bInterfaceSubClass	= USB_CDC_SUBCLASS_ETHERNET,
 	.bInterfaceProtocol	= USB_CDC_PROTO_NONE,
 	.driver_info = (unsigned long)&wwan_info,
 }, {
-	
+	/* ZTE (Vodafone) K3770-Z */
 	.match_flags    =   USB_DEVICE_ID_MATCH_VENDOR
 		 | USB_DEVICE_ID_MATCH_PRODUCT
 		 | USB_DEVICE_ID_MATCH_INT_INFO,
-	.idVendor               = ZFG_VENDOR_ID,
+	.idVendor               = ZTE_VENDOR_ID,
 	.idProduct		= 0x1177,
 	.bInterfaceClass	= USB_CLASS_COMM,
 	.bInterfaceSubClass	= USB_CDC_SUBCLASS_ETHERNET,
 	.bInterfaceProtocol	= USB_CDC_PROTO_NONE,
 	.driver_info = (unsigned long)&wwan_info,
 }, {
-	
+	/* ZTE (Vodafone) K3772-Z */
 	.match_flags    =   USB_DEVICE_ID_MATCH_VENDOR
 		 | USB_DEVICE_ID_MATCH_PRODUCT
 		 | USB_DEVICE_ID_MATCH_INT_INFO,
-	.idVendor               = ZFG_VENDOR_ID,
+	.idVendor               = ZTE_VENDOR_ID,
 	.idProduct		= 0x1181,
 	.bInterfaceClass	= USB_CLASS_COMM,
 	.bInterfaceSubClass	= USB_CDC_SUBCLASS_ETHERNET,

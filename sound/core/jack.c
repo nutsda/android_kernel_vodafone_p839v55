@@ -25,10 +25,6 @@
 #include <sound/jack.h>
 #include <sound/core.h>
 
-
-#include <linux/proc_fs.h>
-
-
 static int jack_switch_types[] = {
 	SW_HEADPHONE_INSERT,
 	SW_MICROPHONE_INSERT,
@@ -41,33 +37,6 @@ static int jack_switch_types[] = {
 	SW_UNSUPPORT_INSERT,
 	SW_MICROPHONE2_INSERT,
 };
-
-
-static int hs_type = 0;
-
-static int hs_show(struct seq_file *m, void *v)
-{	
-    seq_printf(m, "%d\n", hs_type);
-    return 0;
-}
-
-static int hs_open(struct inode *inode, struct file *file)
-{
-
-    return single_open(file, hs_show, NULL);
-}
-
-
-
-static const struct file_operations jack_proc_fops = {
-	.owner		= THIS_MODULE,
-	.open		= hs_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-
 
 static int snd_jack_dev_free(struct snd_device *device)
 {
@@ -86,7 +55,6 @@ static int snd_jack_dev_free(struct snd_device *device)
 	kfree(jack->id);
 	kfree(jack);
 
-	remove_proc_entry("hs", NULL);//liyang for fastmmi
 	return 0;
 }
 
@@ -94,7 +62,6 @@ static int snd_jack_dev_register(struct snd_device *device)
 {
 	struct snd_jack *jack = device->device_data;
 	struct snd_card *card = device->card;
-	struct proc_dir_entry *proc_hs_type;//liyang for fastmmi
 	int err, i;
 
 	snprintf(jack->name, sizeof(jack->name), "%s %s",
@@ -121,12 +88,6 @@ static int snd_jack_dev_register(struct snd_device *device)
 	err = input_register_device(jack->input_dev);
 	if (err == 0)
 		jack->registered = 1;
-
-
-	proc_hs_type = proc_create("hs", S_IRUGO, NULL, &jack_proc_fops);
-	if (!proc_hs_type) {
-		printk(KERN_ERR"hs: unable to register '/proc/hs' \n");
-	}
 
 	return err;
 }
@@ -275,12 +236,10 @@ void snd_jack_report(struct snd_jack *jack, int status)
 
 	for (i = 0; i < ARRAY_SIZE(jack_switch_types); i++) {
 		int testbit = 1 << i;
-		if (jack->type & testbit){
+		if (jack->type & testbit)
 			input_report_switch(jack->input_dev,
 					    jack_switch_types[i],
 					    status & testbit);
-			hs_type = status;
-		}
 	}
 
 	input_sync(jack->input_dev);

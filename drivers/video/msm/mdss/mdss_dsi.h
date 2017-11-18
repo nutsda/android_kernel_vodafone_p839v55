@@ -301,6 +301,7 @@ enum {
 
 struct mdss_dsi_ctrl_pdata {
 	int ndx;	/* panel_num */
+ 	char *panel_name;
 	int (*on) (struct mdss_panel_data *pdata);
 	int (*post_panel_on)(struct mdss_panel_data *pdata);
 	int (*off) (struct mdss_panel_data *pdata);
@@ -334,15 +335,6 @@ struct mdss_dsi_ctrl_pdata {
 	struct clk *shadow_byte_clk;
 	struct clk *shadow_pixel_clk;
 	struct clk *vco_clk;
-   //zhangjian add for 8939 LCD
-#ifdef CONFIG_ZFG_LCD_P8939
-        int disp_vdddc_en_gpio;
-	int disp_vddio_en_gpio;
-        int disp_debug_mode_en_gpio;
-        int disp_vsp_gpio;
-	int disp_vsn_gpio;
-#endif
-	//zhangjian add end
 	u8 ctrl_state;
 	int panel_mode;
 	int irq_cnt;
@@ -427,6 +419,8 @@ struct mdss_dsi_ctrl_pdata {
 	int horizontal_idle_cnt;
 	struct panel_horizontal_idle *line_idle;
 	struct mdss_util_intf *mdss_util;
+
+	bool dfps_status;	/* dynamic refresh status */
 };
 
 struct dsi_status_data {
@@ -434,17 +428,15 @@ struct dsi_status_data {
 	struct delayed_work check_status;
 	struct msm_fb_data_type *mfd;
 };
-//zhangjian add for 8939 LCD
-int mdss_dsi_panel_power_enable(struct mdss_panel_data *pdata, int enable);
-//add end 
+
 int dsi_panel_device_register(struct device_node *pan_node,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
-		struct dsi_cmd_desc *cmds, int cnt);
+		struct dsi_cmd_desc *cmds, int cnt, int use_dma_tpg);
 
 int mdss_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
-			struct dsi_cmd_desc *cmds, int rlen);
+			struct dsi_cmd_desc *cmds, int rlen, int use_dma_tpg);
 
 void mdss_dsi_host_init(struct mdss_panel_data *pdata);
 void mdss_dsi_op_mode_config(int mode,

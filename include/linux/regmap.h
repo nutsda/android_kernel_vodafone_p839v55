@@ -49,6 +49,20 @@ struct reg_default {
 	unsigned int def;
 };
 
+/**
+ * Register/value pairs for sequences of writes with an optional delay in
+ * microseconds to be applied after each write.
+ *
+ * @reg: Register address.
+ * @def: Register value.
+ * @delay_us: Delay to be applied after the register write in microseconds
+ */
+struct reg_sequence {
+	unsigned int reg;
+	unsigned int def;
+	unsigned int delay_us;
+};
+
 #ifdef CONFIG_REGMAP
 
 enum regmap_endian {

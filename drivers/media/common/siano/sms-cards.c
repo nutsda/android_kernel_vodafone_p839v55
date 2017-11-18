@@ -117,8 +117,8 @@ static struct sms_board sms_boards[] = {
 		.default_mode = DEVICE_MODE_DVBT_BDA,
 		.intf_num = 1,
 	},
-	[SMS1XXX_BOARD_ZFG_DVB_DATA_CARD] = {
-		.name = "ZFG Data Card Digital Receiver",
+	[SMS1XXX_BOARD_ZTE_DVB_DATA_CARD] = {
+		.name = "ZTE Data Card Digital Receiver",
 		.type = SMS_NOVA_B0,
 		.default_mode = DEVICE_MODE_DVBT_BDA,
 		.intf_num = 5,

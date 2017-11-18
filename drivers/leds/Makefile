@@ -59,10 +59,7 @@ obj-$(CONFIG_LEDS_BLINKM)		+= leds-blinkm.o
 obj-$(CONFIG_LEDS_MSM_GPIO_FLASH)	+= leds-msm-gpio-flash.o
 obj-$(CONFIG_LEDS_AW2013)		+= leds-aw2013.o
 
-# chenyingfang 20141121 for NotifyLight,start
-obj-$(CONFIG_LEDS_AW2013)	+= aw2013.o
-# chenyingfang 20141121 for NotifyLight,end
-# LED SPI Drivers
+obj-$(CONFIG_LEDS_AW2013)		+= aw2013.o
 obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o
 
 # LED Triggers

@@ -236,6 +236,7 @@ int spmi_add_device(struct spmi_device *spmidev)
 		pr_err("invalid SPMI device\n");
 		return -EINVAL;
 	}
+
 	id = ida_simple_get(&spmi_devid_ida, 0, 0, GFP_KERNEL);
 	if (id < 0) {
 		pr_err("No id available status = %d\n", id);
@@ -249,13 +250,12 @@ int spmi_add_device(struct spmi_device *spmidev)
 	/* Device may be bound to an active driver when this returns */
 	rc = device_add(dev);
 
-	if (rc < 0){
+	if (rc < 0) {
 		ida_simple_remove(&spmi_devid_ida, spmidev->id);
 		dev_err(dev, "Can't add %s, status %d\n", dev_name(dev), rc);
-		}
-	else{
+	} else {
 		dev_dbg(dev, "device %s registered\n", dev_name(dev));
-		}
+	}
 
 	return rc;
 }

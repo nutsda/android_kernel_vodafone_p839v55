@@ -78,7 +78,9 @@ static void devm_usb_phy_release(struct device *dev, void *res)
 
 static int devm_usb_phy_match(struct device *dev, void *res, void *match_data)
 {
-	return res == match_data;
+	struct usb_phy **phy = res;
+
+	return *phy == match_data;
 }
 
 /**
@@ -329,6 +331,8 @@ int usb_add_phy(struct usb_phy *x, enum usb_phy_type type)
 		return -EINVAL;
 	}
 
+	ATOMIC_INIT_NOTIFIER_HEAD(&x->notifier);
+
 	spin_lock_irqsave(&phy_lock, flags);
 
 	list_for_each_entry(phy, &phy_list, head) {
@@ -366,6 +370,8 @@ int usb_add_phy_dev(struct usb_phy *x)
 		dev_err(x->dev, "no device provided for PHY\n");
 		return -EINVAL;
 	}
+
+	ATOMIC_INIT_NOTIFIER_HEAD(&x->notifier);
 
 	spin_lock_irqsave(&phy_lock, flags);
 	list_for_each_entry(phy_bind, &phy_bind_list, list)

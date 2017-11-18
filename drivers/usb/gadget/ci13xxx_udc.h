@@ -184,10 +184,6 @@ struct ci13xxx {
 	bool                      skip_flush; /* skip flushing remaining EP
 						upon flush timeout for the
 						first EP. */
-        
- //zz       /*xbl-20121128*/
-        struct switch_dev scsi_sdev; 
-//zz
 };
 
 /******************************************************************************
@@ -232,7 +228,6 @@ struct ci13xxx {
 #define PORTSC_PR             BIT(8)
 #define PORTSC_HSP            BIT(9)
 #define PORTSC_PTC            (0x0FUL << 16)
-#define PORTSC_PFSC           BIT(24)
 
 /* DEVLC */
 #define DEVLC_PSPD            (0x03UL << 25)

@@ -476,16 +476,13 @@ struct input_keymap_entry {
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
-/* add start by jiangchong for Hall sensor driver,20141212*/
 #define KEY_HALL_SENSOR_DOWN	249
-#define KEY_HALL_SENSOR_UP	 250
-/* add end by jiangchong for Hall sensor driver,20141212*/
+#define KEY_HALL_SENSOR_UP	250
 
-
-#define KEY_SLIP_DOWN	251
-#define KEY_SLIP_UP	    252
-#define KEY_SLIP_LEFT	253
-#define KEY_SLIP_RIGHT	254
+#define KEY_SLIP_DOWN		251
+#define KEY_SLIP_UP		252
+#define KEY_SLIP_LEFT		253
+#define KEY_SLIP_RIGHT		254
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 

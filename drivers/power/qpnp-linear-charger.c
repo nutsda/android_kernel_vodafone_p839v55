@@ -69,7 +69,7 @@ static int full_recharger_ms = 0;
 #define VINMIN_LOOP_BIT				BIT(3)
 #define CHG_VDD_MAX_REG				0x40
 #define CHG_VDD_SAFE_REG			0x41
-#define CHG_VDDMAX_GSM_ADJ          0x43             //added for close GSM ADJ 20140812
+#define CHG_VDDMAX_GSM_ADJ          		0x43
 #define CHG_IBAT_MAX_REG			0x44
 #define CHG_IBAT_SAFE_REG			0x45
 #define CHG_VIN_MIN_REG				0x47
@@ -94,7 +94,7 @@ static int full_recharger_ms = 0;
 #define VIN_MIN_LOOP_DISABLE_BIT		BIT(0)
 #define OVERRIDE_0				0x2
 #define OVERRIDE_NONE				0x0
-#define CHG_LED				0x4D
+#define CHG_LED					0x4D
 
 /* BATTIF peripheral register offset */
 #define BAT_IF_PRES_STATUS_REG			0x08
@@ -355,7 +355,7 @@ struct qpnp_lbc_chip {
 	unsigned int			cfg_safe_voltage_mv;
 	unsigned int			cfg_max_voltage_mv;
 	unsigned int			cfg_min_voltage_mv;
-	unsigned int			max_bat_chg_current; //added for limit the max bat current 2014.7.14
+	unsigned int			max_bat_chg_current;
 	unsigned int			cfg_charger_detect_eoc;
 	unsigned int			cfg_disable_vbatdet_based_recharge;
 	unsigned int			cfg_batt_weak_voltage_uv;
@@ -1357,7 +1357,7 @@ static int get_prop_charge_type(struct qpnp_lbc_chip *chip)
 
 	return POWER_SUPPLY_CHARGE_TYPE_NONE;
 }
-//added for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
+
 #ifdef QPNP_LCHARGER_SOC_FULL
 static int get_prop_batt_status(struct qpnp_lbc_chip *chip);
 static int get_prop_UI_charge_type(struct qpnp_lbc_chip *chip)
@@ -1407,7 +1407,6 @@ static int get_prop_batt_status(struct qpnp_lbc_chip *chip)
 	return POWER_SUPPLY_STATUS_DISCHARGING;
 }
 
-//added for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
 #ifdef QPNP_LCHARGER_SOC_FULL
 static int get_prop_UI_batt_status(struct qpnp_lbc_chip *chip)
 {
@@ -1536,7 +1535,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 {
 	unsigned int chg_current = chip->usb_psy_ma;
 
-	printk("qpnp_lbc_set_appropriate_current:chg_current=%d\n",chg_current);
+	pr_debug("qpnp_lbc_set_appropriate_current:chg_current=%d\n",chg_current);
 
 	if (chip->bat_is_cool && chip->cfg_cool_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
@@ -1548,7 +1547,7 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 	else 
 		chg_current = min(chg_current,chip->max_bat_chg_current);
 
-	printk("setting charger current %d mA\n", chg_current);
+	pr_debug("setting charger current %d mA\n", chg_current);
 	qpnp_lbc_ibatmax_set(chip, chg_current);
 }
 
@@ -1569,7 +1568,7 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 				POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
 		current_ma = ret.intval / 1000;
 
-                printk("charger_debug:current_ma = %d\n",current_ma);
+                pr_debug("charger_debug:current_ma = %d\n",current_ma);
 		if (current_ma == chip->prev_max_ma)
 			goto skip_current_config;
 
@@ -1745,7 +1744,7 @@ void qpnp_lbc_soc_full_work_fn(struct work_struct *work)
 	struct qpnp_lbc_chip *chip = container_of(work, struct qpnp_lbc_chip,
 						soc_full_work.work);
 
-	printk("charger_debug:qpnp_lbc_soc_full_work_fn enter\n");
+	pr_debug("charger_debug:qpnp_lbc_soc_full_work_fn enter\n");
 
 	pm_stay_awake(chip->dev);
 	
@@ -1892,8 +1891,7 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 						&chip->irqs[CHG_VBAT_DET_LO]);
 			}
 #else
-			//printk("charger_debug:full_recharger_ms=%d\n",full_recharger_ms);
-                        if(0 == full_recharger_ms){
+			if(0 == full_recharger_ms){
 				spin_lock_irqsave(&chip->full_work_access_lock,flags);
 				schedule_delayed_work(&chip->soc_full_work,0);
 				spin_unlock_irqrestore(&chip->full_work_access_lock,flags);
@@ -1959,7 +1957,6 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 #ifdef QPNP_LCHARGER_SOC_FULL
-//modified for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
 		val->intval = get_prop_UI_batt_status(chip);
 #else
 		val->intval = get_prop_batt_status(chip);
@@ -1967,7 +1964,6 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 #ifdef QPNP_LCHARGER_SOC_FULL
-//added for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
 		val->intval = get_prop_UI_charge_type(chip);
 #else
 		val->intval = get_prop_charge_type(chip);
@@ -2013,7 +2009,6 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 		val->intval = qpnp_lbc_is_usb_chg_plugged_in(chip);
 		break;
 #ifdef QPNP_LCHARGER_SOC_FULL
-//added for soc = 100%,report UI FULL, and still charging in kernel 2014.8.8
 	case POWER_SUPPLY_PROP_REAL_CHARGE_TYPE:
 		val->intval = get_prop_charge_type(chip);
 		break;
@@ -2803,7 +2798,7 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 	unsigned long flags;
 
 	usb_present = qpnp_lbc_is_usb_chg_plugged_in(chip);
-	printk("%s,usbin-valid triggered: %d\n",__func__, usb_present);
+	pr_debug("usbin-valid triggered: %d\n", usb_present);
 
 	if (chip->usb_present ^ usb_present) {
 		chip->usb_present = usb_present;
@@ -2852,7 +2847,7 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 			qpnp_lbc_charger_enable(chip, SOC, 1);
 		}
 
-		printk("%s,Updating usb_psy PRESENT property\n",__func__);
+		pr_debug("Updating usb_psy PRESENT property\n");
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
 	}
 
@@ -2925,7 +2920,7 @@ static irqreturn_t qpnp_lbc_chg_failed_irq_handler(int irq, void *_chip)
 	int rc;
 	u8 reg_val = CHG_FAILED_BIT;
 
-	printk("charger_debug:chg_failed triggered count=%u\n", ++chip->chg_failed_count);
+	pr_debug("chg_failed triggered count=%u\n", ++chip->chg_failed_count);
 	rc = qpnp_lbc_write(chip, chip->chgr_base + CHG_FAILED_REG,
 				&reg_val, 1);
 	if (rc)
@@ -2963,7 +2958,7 @@ static irqreturn_t qpnp_lbc_fastchg_irq_handler(int irq, void *_chip)
 
 	fastchg_on = qpnp_lbc_is_fastchg_on(chip);
 
-	printk("charger_debug:FAST_CHG IRQ triggered, fastchg_on: %d\n", fastchg_on);
+	pr_debug("FAST_CHG IRQ triggered, fastchg_on: %d\n", fastchg_on);
 
 	if (chip->fastchg_on ^ fastchg_on) {
 		chip->fastchg_on = fastchg_on;
@@ -2996,7 +2991,7 @@ static irqreturn_t qpnp_lbc_chg_done_irq_handler(int irq, void *_chip)
 {
 	struct qpnp_lbc_chip *chip = _chip;
 
-	printk("charger_debug:charging done triggered\n");
+	pr_debug("charging done triggered\n");
 
 	chip->chg_done = true;
 	pr_debug("power supply changed batt_psy\n");
@@ -3010,7 +3005,7 @@ static irqreturn_t qpnp_lbc_vbatdet_lo_irq_handler(int irq, void *_chip)
 	struct qpnp_lbc_chip *chip = _chip;
 	int rc;
 
-	printk("charger_debug:vbatdet-lo triggered\n");
+	pr_debug("vbatdet-lo triggered\n");
 
 	/*
 	 * Disable vbatdet irq to prevent interrupt storm when VBAT is
@@ -3498,7 +3493,6 @@ static int qpnp_lbc_parse_resources(struct qpnp_lbc_chip *chip)
 		case LBC_CHGR_SUBTYPE:
 			chip->chgr_base = resource->start;
 
-                        //added by lilei for  red led 2014.7.7
 			if(!lbc_chip ){
 				lbc_chip = chip;
 			}
@@ -3661,8 +3655,7 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 		rc = qpnp_disable_lbc_charger(chip);
 		if (rc)
 			pr_err("Unable to disable charger rc=%d\n", rc);
-		//return -ENODEV;	
-		return 0;
+		return -ENODEV;
 	}
 
 	chip->vadc_dev = qpnp_get_vadc(chip->dev, "chg");
@@ -3766,7 +3759,6 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 	if (chip->cfg_charging_disabled && !get_prop_batt_present(chip))
 		pr_info("Battery absent and charging disabled !!!\n");
 
-//fengwei add for lbc debug
 #ifdef QPNP_LCHARGER_DEBUG
 	{
 		chip->debug_root = debugfs_create_dir("qpnp_lcharger", NULL);

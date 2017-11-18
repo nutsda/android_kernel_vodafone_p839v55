@@ -40,7 +40,6 @@ config LEDS_ATMEL_PWM
 	  This option enables support for LEDs driven using outputs
 	  of the dedicated PWM controller found on newer Atmel SOCs.
 
-# chenyingfang 20141121 for NotifyLight,start
 config LEDS_AW2013
 	tristate "LED support for the AW2013"
 	depends on LEDS_CLASS
@@ -49,16 +48,12 @@ config LEDS_AW2013
 	  This option enables support for the AW2013 connected
 	  through I2C
 
-# chenyingfang 20141121 for NotifyLight,end
-
-# chenyingfang add for T60 led current control begin  
 config LED_BRIGHTNESS_SETTING
         tristate "LED Support for brightness control"
         default n
         depends on ARCH_MSM
         help
           This option enables support for LEDs controled by modem subsystem.		  
-# chenyingfang  add for T60 led current control end  
 
 config LEDS_LM3530
 	tristate "LCD Backlight driver for LM3530"

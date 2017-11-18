@@ -49,11 +49,11 @@ static const char *handler[]= {
 void *vectors_page;
 
 #ifdef CONFIG_DEBUG_USER
-unsigned int user_debug = 0;//modified by zhouxin for removing unhandled page fault print of userspace process in kernel log 
+unsigned int user_debug;
 
 static int __init user_debug_setup(char *str)
 {
-	////get_option(&str, &user_debug);//modified by zhouxin for removing unhandled page fault print of userspace process in kernel log
+	get_option(&str, &user_debug);
 	return 1;
 }
 __setup("user_debug=", user_debug_setup);
@@ -350,15 +350,17 @@ void arm_notify_die(const char *str, struct pt_regs *regs,
 int is_valid_bugaddr(unsigned long pc)
 {
 #ifdef CONFIG_THUMB2_KERNEL
-	unsigned short bkpt;
+	u16 bkpt;
+	u16 insn = __opcode_to_mem_thumb16(BUG_INSTR_VALUE);
 #else
-	unsigned long bkpt;
+	u32 bkpt;
+	u32 insn = __opcode_to_mem_arm(BUG_INSTR_VALUE);
 #endif
 
 	if (probe_kernel_address((unsigned *)pc, bkpt))
 		return 0;
 
-	return bkpt == BUG_INSTR_VALUE;
+	return bkpt == insn;
 }
 
 #endif

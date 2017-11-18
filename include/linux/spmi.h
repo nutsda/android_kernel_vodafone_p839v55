@@ -120,7 +120,7 @@ struct spmi_resource {
  *  @dev_node: array of SPMI resources when used with spmi-dev-container.
  *  @num_dev_node: number of device_node structures.
  *  @sid: Slave Identifier.
- * @id: Unique identifier to differentiate from other spmi devices with
+ *  @id: Unique identifier to differentiate from other spmi devices with
  *       possibly same name.
  *
  */
